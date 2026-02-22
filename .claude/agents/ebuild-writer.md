@@ -51,14 +51,18 @@ pkgdev is the standard Gentoo development tool built on pkgcore. Use it for:
 - **`pkgdev commit`** — Commit staged changes with an auto-generated commit message and automatic Manifest regeneration. Use `-e` to edit the generated message.
 - **`pkgdev push`** — Run final QA checks (pkgcheck scan) and abort on fatal errors before pushing.
 
-### pkgcraft / pkgcruft (dev-util/pkgcraft-tools)
+### pkgcheck (dev-util/pkgcheck)
 
-pkgcraft is a Rust-based tooling ecosystem for Gentoo. Use it for:
+pkgcheck is the standard Gentoo QA tool (part of the pkgcore ecosystem). Use it for:
 
-- **`pkgcruft scan`** — QA scanning similar to pkgcheck. Run against the package directory to detect issues like improper variable ordering, deprecated EAPI usage, and other QA violations.
+- **`pkgcheck scan <category/package>`** — QA scanning. Run against the package directory to detect issues like improper variable ordering, deprecated EAPI usage, missing metadata, and other QA violations.
+- **`pkgcheck scan --exit error`** — Exit non-zero only on errors (not warnings), useful in CI.
+
+### pkgcraft (dev-util/pkgcraft-tools)
+
+Optional Rust-based tooling for inspecting package data:
+
 - **`pk pkg env <cpv> <var>`** — Inspect ebuild environment variables (SRC_URI, RDEPEND, etc.).
-- **`pk pkg fetch`** — Fetch distfiles and manage Manifest files.
-- **`pk pkg keywords`** — Show package keywords.
 - **`pk dep parse`** / **`pk cpv parse`** — Parse and validate dependency strings and CPV identifiers.
 
 ### Workflow with tools
@@ -66,9 +70,10 @@ pkgcraft is a Rust-based tooling ecosystem for Gentoo. Use it for:
 After writing an ebuild:
 
 1. Run `pkgdev manifest` to generate the Manifest.
-2. Run `pkgcruft scan <category/package>` for QA checks.
+2. Run `pkgcheck scan <category/package>` for QA checks.
 3. Fix any issues reported.
-4. Stage changes and use `pkgdev commit -e` to commit with a properly formatted message.
+4. Build the ebuild to verify it compiles: `ebuild <path-to-ebuild> clean fetch unpack prepare configure compile`.
+5. Stage changes and use `pkgdev commit -e` to commit with a properly formatted message.
 
 If a tool is not installed, note it to the user and proceed — the ebuild itself is the primary deliverable.
 
@@ -84,7 +89,8 @@ When asked to create an ebuild for a package:
 6. **Write the ebuild** — Follow EAPI 8, the variable ordering convention, and the QA checklist below.
 7. **Write `metadata.xml`** — Include maintainer, upstream info, and USE flag descriptions. Determine the maintainer from git config (`user.name`, `user.email`) or ask the user.
 8. **Generate the Manifest** — Run `pkgdev manifest` in the package directory.
-9. **Run QA checks** — Run `pkgcruft scan <category/package>` and fix any issues.
+9. **Run QA checks** — Run `pkgcheck scan <category/package>` and fix any issues.
+10. **Build verification** — Run `ebuild <path-to-ebuild> clean fetch unpack prepare configure compile` to confirm the package builds successfully without installing it. Fix any build failures before reporting completion.
 
 ## EAPI 8 Reference
 
@@ -385,4 +391,5 @@ Before finalizing an ebuild, verify:
 - [ ] **No trailing whitespace**
 - [ ] **Empty lines**: Single blank line between sections, no double blanks
 - [ ] **RESTRICT="!test? ( test )"** if IUSE contains `test`
-- [ ] **Run `pkgcruft scan`** and fix any reported issues
+- [ ] **Run `pkgcheck scan <category/package>`** and fix any reported issues
+- [ ] **Build verification**: `ebuild <path>.ebuild clean fetch unpack prepare configure compile` succeeds
