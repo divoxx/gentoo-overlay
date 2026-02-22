@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">smoofra/mslex</remote-id>
+		<remote-id type="pypi">mslex</remote-id>
+	</upstream>
+</pkgmetadata>
