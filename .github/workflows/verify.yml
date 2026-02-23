@@ -4,11 +4,9 @@ on:
   push:
     branches-ignore:
       - main
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -28,20 +26,11 @@ jobs:
 
       - name: Detect changed ebuilds
         id: detect
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
 
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD)
-          elif git rev-parse --verify HEAD~1 > /dev/null 2>&1; then
-            CHANGED=$(git diff --name-only HEAD~1 HEAD)
-          else
-            # Single-commit repo: treat all ebuilds as changed
-            CHANGED=$(git ls-files '*.ebuild')
-          fi
+          MERGE_BASE=$(git merge-base HEAD origin/main)
+          CHANGED=$(git diff --name-only "$MERGE_BASE" HEAD)
 
           EBUILD_CHANGES=$(echo "$CHANGED" | grep '\.ebuild$' || true)
           PACKAGES=$(echo "$EBUILD_CHANGES" \
@@ -108,14 +97,34 @@ jobs:
 
   promote:
     needs: verify
-    if: |
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.draft == true
     runs-on: ubuntu-latest
     steps:
-      - name: Mark PR ready for review
+      - name: Promote draft PR to ready
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
-        run: gh pr ready "$PR_NUMBER" --repo "$REPO"
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          PR=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number,isDraft \
+            --repo "$REPO" \
+            -q '.[0] // empty')
+
+          if [ -z "$PR" ]; then
+            echo "No open PR for $BRANCH — skipping"
+            exit 0
+          fi
+
+          IS_DRAFT=$(echo "$PR" | jq -r '.isDraft')
+          PR_NUMBER=$(echo "$PR" | jq -r '.number')
+
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "Promoting PR #$PR_NUMBER to ready for review"
+            gh pr ready "$PR_NUMBER" --repo "$REPO"
+          else
+            echo "PR #$PR_NUMBER is already ready for review — skipping"
+          fi
