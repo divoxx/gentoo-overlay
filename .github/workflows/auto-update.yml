@@ -1,0 +1,157 @@
+name: Auto-Update Ebuilds
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily
+  workflow_dispatch:        # allow manual trigger for testing
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  list-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List overlay packages
+        id: list
+        run: |
+          set -euo pipefail
+          PACKAGES=$(find . -name "*.ebuild" -not -path "./.git/*" \
+            | awk -F/ '{print $2"/"$3}' \
+            | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+
+  update:
+    needs: list-packages
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:amd64
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.list-packages.outputs.packages) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync Portage tree
+        run: emerge-webrsync -q
+
+      - name: Install Gentoo tooling
+        run: emerge --getbinpkg --quiet-build dev-util/pkgdev dev-util/pkgcheck
+
+      - name: Install Node.js
+        run: emerge --getbinpkg --quiet-build dev-lang/nodejs
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        env:
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/$REPO.git"
+
+      - name: Run ebuild-updater
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          timeout 3600 claude --print \
+            --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch" \
+            "Use the ebuild-updater agent to check for upstream updates and bump the ebuild \
+            for $PACKAGE if a newer version exists. Do not run pkgcheck or build \
+            verification — those are handled by a separate CI workflow."
+
+      - name: Check for changes
+        id: changes
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prune old versions (keep 5 most recent)
+        if: steps.changes.outputs.updated == 'true'
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          CATEGORY="${PACKAGE%%/*}"
+          NAME="${PACKAGE##*/}"
+          cd "$CATEGORY/$NAME"
+
+          EXCESS=$(ls *.ebuild | sort -V | head -n -5)
+          if [ -n "$EXCESS" ]; then
+            echo "$EXCESS" | xargs rm -f
+            pkgdev manifest
+          fi
+
+      - name: Commit and push update branch
+        if: steps.changes.outputs.updated == 'true'
+        id: push
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          CATEGORY="${PACKAGE%%/*}"
+          NAME="${PACKAGE##*/}"
+          BRANCH="auto-update/${CATEGORY}-${NAME}"
+
+          git checkout -b "$BRANCH"
+          git add "${CATEGORY}/${NAME}/"
+          git commit -m "auto-update: bump $PACKAGE"
+          git push origin "$BRANCH" --force-with-lease
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Open draft PR (skip if one already exists)
+        if: steps.changes.outputs.updated == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE: ${{ matrix.package }}
+          BRANCH: ${{ steps.push.outputs.branch }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          EXISTING=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number \
+            --repo "$REPO" \
+            -q '.[0].number // empty')
+
+          if [ -n "${EXISTING:-}" ]; then
+            echo "PR #$EXISTING already open for $BRANCH — skipping"
+            exit 0
+          fi
+
+          BODY=$(printf '%s\n\n%s\n\n%s' \
+            "Automated upstream version bump for \`$PACKAGE\`." \
+            "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
+            "Generated with [Claude Code](https://claude.com/claude-code)")
+
+          gh pr create \
+            --draft \
+            --title "auto-update: $PACKAGE" \
+            --body "$BODY" \
+            --base main \
+            --head "$BRANCH" \
+            --repo "$REPO"

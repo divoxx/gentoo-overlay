@@ -1,0 +1,131 @@
+name: Verify Ebuilds
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed ebuilds
+        id: detect
+        run: |
+          set -euo pipefail
+
+          MERGE_BASE=$(git merge-base HEAD origin/main)
+          CHANGED=$(git diff --name-only "$MERGE_BASE" HEAD)
+
+          EBUILD_CHANGES=$(echo "$CHANGED" | grep '\.ebuild$' || true)
+          PACKAGES=$(echo "$EBUILD_CHANGES" \
+            | awk -F/ 'NF >= 3 {print $1"/"$2}' \
+            | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+
+          if [ "$PACKAGES" = "[]" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:amd64
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.packages) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync Portage tree
+        run: emerge-webrsync -q
+
+      - name: Install Gentoo tooling
+        run: emerge --getbinpkg --quiet-build dev-util/pkgdev dev-util/pkgcheck
+
+      - name: Install Node.js
+        run: emerge --getbinpkg --quiet-build dev-lang/nodejs
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run ebuild-verifier
+        id: verify
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+
+          OUTPUT=$(timeout 1800 claude --print \
+            --allowedTools "Task,Read,Bash,Glob,Grep" \
+            "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
+            Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
+            compile phase without installing. Report results.")
+
+          echo "$OUTPUT"
+
+          if echo "$OUTPUT" | grep -qF "Overall: PASS"; then
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+  promote:
+    needs: verify
+    if: startsWith(github.ref_name, 'auto-update/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Promote draft PR to ready
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          PR=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number,isDraft \
+            --repo "$REPO" \
+            -q '.[0] // empty')
+
+          if [ -z "$PR" ]; then
+            echo "No open PR for $BRANCH — skipping"
+            exit 0
+          fi
+
+          IS_DRAFT=$(echo "$PR" | jq -r '.isDraft')
+          PR_NUMBER=$(echo "$PR" | jq -r '.number')
+
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "Promoting PR #$PR_NUMBER to ready for review"
+            gh pr ready "$PR_NUMBER" --repo "$REPO"
+          else
+            echo "PR #$PR_NUMBER is already ready for review — skipping"
+          fi
