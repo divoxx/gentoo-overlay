@@ -28,10 +28,15 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
         run: |
+          set -euo pipefail
+
           if [ "$EVENT_NAME" = "pull_request" ]; then
             CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD)
-          else
+          elif git rev-parse --verify HEAD~1 > /dev/null 2>&1; then
             CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          else
+            # Single-commit repo: treat all ebuilds as changed
+            CHANGED=$(git ls-files '*.ebuild')
           fi
 
           PACKAGES=$(echo "$CHANGED" \
@@ -42,7 +47,7 @@ jobs:
 
           echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
 
-          if [ "$PACKAGES" = "[]" ] || [ -z "$PACKAGES" ]; then
+          if [ "$PACKAGES" = "[]" ]; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
@@ -80,7 +85,9 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PACKAGE: ${{ matrix.package }}
         run: |
-          OUTPUT=$(claude --print \
+          set -euo pipefail
+
+          OUTPUT=$(timeout 1800 claude --print \
             --allowedTools "Task,Read,Bash,Glob,Grep" \
             "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
             Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
@@ -88,7 +95,7 @@ jobs:
 
           echo "$OUTPUT"
 
-          if echo "$OUTPUT" | grep -q "Overall: PASS"; then
+          if echo "$OUTPUT" | grep -qF "Overall: PASS"; then
             echo "result=pass" >> "$GITHUB_OUTPUT"
           else
             echo "result=fail" >> "$GITHUB_OUTPUT"
