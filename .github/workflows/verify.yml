@@ -97,6 +97,7 @@ jobs:
 
   promote:
     needs: verify
+    if: startsWith(github.ref_name, 'auto-update/')
     runs-on: ubuntu-latest
     steps:
       - name: Promote draft PR to ready
