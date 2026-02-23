@@ -45,7 +45,7 @@ jobs:
 
           EBUILD_CHANGES=$(echo "$CHANGED" | grep '\.ebuild$' || true)
           PACKAGES=$(echo "$EBUILD_CHANGES" \
-            | awk -F/ '{print $1"/"$2}' \
+            | awk -F/ 'NF >= 3 {print $1"/"$2}' \
             | sort -u \
             | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
