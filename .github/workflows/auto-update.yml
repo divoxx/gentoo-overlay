@@ -47,10 +47,10 @@ jobs:
         run: emerge-webrsync -q
 
       - name: Install Gentoo tooling
-        run: emerge --getbinpkg --quiet-build dev-util/pkgdev dev-util/pkgcheck
+        run: emerge --quiet-build dev-util/pkgdev dev-util/pkgcheck
 
       - name: Install Node.js
-        run: emerge --getbinpkg --quiet-build dev-lang/nodejs
+        run: emerge --quiet-build dev-lang/nodejs
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
