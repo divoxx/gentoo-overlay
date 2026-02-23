@@ -31,7 +31,7 @@ jobs:
     needs: list-packages
     runs-on: ubuntu-latest
     container:
-      image: gentoo/stage3:amd64
+      image: gentoo/stage3:amd64-systemd
     strategy:
       matrix:
         package: ${{ fromJson(needs.list-packages.outputs.packages) }}
