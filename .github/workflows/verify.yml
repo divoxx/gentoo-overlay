@@ -1,0 +1,110 @@
+name: Verify Ebuilds
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed ebuilds
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
+          PACKAGES=$(echo "$CHANGED" \
+            | grep '\.ebuild$' \
+            | awk -F/ '{print $1"/"$2}' \
+            | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+
+          if [ "$PACKAGES" = "[]" ] || [ -z "$PACKAGES" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:amd64
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.packages) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync Portage tree
+        run: emerge-webrsync -q
+
+      - name: Install Gentoo tooling
+        run: emerge --getbinpkg --quiet-build dev-util/pkgdev dev-util/pkgcheck
+
+      - name: Install Node.js
+        run: emerge --getbinpkg --quiet-build dev-lang/nodejs
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run ebuild-verifier
+        id: verify
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          OUTPUT=$(claude --print \
+            --allowedTools "Task,Read,Bash,Glob,Grep" \
+            "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
+            Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
+            compile phase without installing. Report results.")
+
+          echo "$OUTPUT"
+
+          if echo "$OUTPUT" | grep -q "Overall: PASS"; then
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+  promote:
+    needs: verify
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark PR ready for review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh pr ready "$PR_NUMBER" --repo "$REPO"
