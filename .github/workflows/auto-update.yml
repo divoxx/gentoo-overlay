@@ -115,7 +115,7 @@ jobs:
           BRANCH="auto-update/${CATEGORY}-${NAME}"
 
           git checkout -b "$BRANCH"
-          git add -A
+          git add "${CATEGORY}/${NAME}/"
           git commit -m "auto-update: bump $PACKAGE"
           git push origin "$BRANCH" --force-with-lease
 
@@ -136,9 +136,9 @@ jobs:
             --state open \
             --json number \
             --repo "$REPO" \
-            -q '.[0].number')
+            -q '.[0].number // empty')
 
-          if [ -n "$EXISTING" ]; then
+          if [ -n "${EXISTING:-}" ]; then
             echo "PR #$EXISTING already open for $BRANCH — skipping"
             exit 0
           fi
