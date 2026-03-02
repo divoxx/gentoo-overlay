@@ -1,0 +1,45 @@
+# gentoo-overlay
+
+A personal Gentoo package overlay by [Rodrigo Kochenburger](https://github.com/divoxx) containing packages not available in the [official Gentoo tree](https://packages.gentoo.org/) or the [GURU overlay](https://gpo.zugaina.org/overlays/guru).
+
+- **EAPI:** 8
+- **Keywords:** `~amd64` (testing only)
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `dev-python/mslex` | Windows-compatible shell lexer (shlex for cmd.exe) |
+| `dev-python/oslex` | OS-aware shell lexer (wraps mslex on Windows, shlex elsewhere) |
+| `dev-util/ufbt` | Micro Flipper Build Tool — SDK for Flipper Zero app development |
+
+## Usage
+
+### eselect-repository (recommended)
+
+```bash
+eselect repository add gentoo-overlay git https://github.com/divoxx/gentoo-overlay.git
+emaint sync -r gentoo-overlay
+```
+
+### repos.conf
+
+Create `/etc/portage/repos.conf/gentoo-overlay.conf`:
+
+```ini
+[gentoo-overlay]
+location = /var/db/repos/gentoo-overlay
+sync-type = git
+sync-uri = https://github.com/divoxx/gentoo-overlay.git
+auto-sync = yes
+```
+
+Then run `emaint sync -r gentoo-overlay`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, engineering standards, and the PR process.
+
+## License
+
+[GPL-2.0-only](LICENSE) — covers the ebuilds and overlay metadata. Each package's upstream license is declared independently via the `LICENSE=` variable in its ebuild.
