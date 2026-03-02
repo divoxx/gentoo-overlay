@@ -38,16 +38,16 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Sync Portage tree
         run: emerge-webrsync -q
 
       - name: Install Gentoo tooling
-        run: emerge --quiet-build dev-util/pkgdev dev-util/pkgcheck
+        run: emerge --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Node.js and Claude Code CLI
         run: |
