@@ -51,7 +51,7 @@ jobs:
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     container:
-      image: gentoo/stage3:amd64
+      image: ghcr.io/${{ github.repository_owner }}/gentoo-ci:latest
     strategy:
       matrix:
         package: ${{ fromJson(needs.detect-changes.outputs.packages) }}
@@ -59,18 +59,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Sync Portage tree
-        run: emerge-webrsync -q
-
-      - name: Install Gentoo tooling
-        run: emerge --getbinpkg --quiet-build dev-util/pkgdev dev-util/pkgcheck
-
-      - name: Install Node.js
-        run: emerge --getbinpkg --quiet-build dev-lang/nodejs
-
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
 
       - name: Run ebuild-verifier
         id: verify

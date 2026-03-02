@@ -1,0 +1,48 @@
+name: Build CI Image
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'   # Sundays 03:00 UTC (before auto-update at 06:00)
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/Containerfile.ci'
+  workflow_dispatch:        # allow manual trigger for testing
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set date tag
+        id: date
+        run: echo "tag=$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        id: build
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: gentoo-ci
+          tags: latest ${{ steps.date.outputs.tag }}
+          containerfiles: .github/Containerfile.ci
+          context: .github/
+
+      - name: Push image
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build.outputs.image }}
+          tags: ${{ steps.build.outputs.tags }}
+          registry: ghcr.io/${{ github.repository_owner }}

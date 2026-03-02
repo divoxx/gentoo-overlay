@@ -31,31 +31,20 @@ jobs:
     needs: list-packages
     runs-on: ubuntu-latest
     container:
-      image: gentoo/stage3:amd64-systemd
+      image: ghcr.io/${{ github.repository_owner }}/gentoo-ci:latest
     strategy:
       matrix:
         package: ${{ fromJson(needs.list-packages.outputs.packages) }}
       fail-fast: false
 
     steps:
-      - name: Sync Portage tree
-        run: emerge-webrsync -q
-
-      - name: Install Gentoo tooling
-        run: emerge --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Node.js and Claude Code CLI
-        run: |
-          set -euo pipefail
-          NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/index.json | python3 -c "import sys,json; v=next(r for r in json.load(sys.stdin) if r['lts']); print(v['version'])")
-          curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" \
-            | tar -xJ -C /usr/local --strip-components=1
-          npm install -g @anthropic-ai/claude-code
+      - name: Sync Portage tree
+        run: emerge --sync -q
 
       - name: Configure git
         env:

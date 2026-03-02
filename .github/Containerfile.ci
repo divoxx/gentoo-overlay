@@ -1,0 +1,5 @@
+FROM gentoo/stage3:amd64-systemd
+
+RUN emerge-webrsync -q && \
+    emerge --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-lang/nodejs && \
+    npm install -g @anthropic-ai/claude-code
