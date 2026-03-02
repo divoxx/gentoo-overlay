@@ -63,11 +63,9 @@ jobs:
           PACKAGE: ${{ matrix.package }}
         run: |
           set -euo pipefail
-          timeout 3600 claude --print \
-            --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch" \
-            "Use the ebuild-updater agent to check for upstream updates and bump the ebuild \
-            for $PACKAGE if a newer version exists. Do not run pkgcheck or build \
-            verification — those are handled by a separate CI workflow."
+          echo "Use the ebuild-updater agent to check for upstream updates and bump the ebuild for $PACKAGE if a newer version exists. Do not run pkgcheck or build verification — those are handled by a separate CI workflow." \
+            | timeout 3600 claude --print \
+                --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch"
 
       - name: Check for changes
         id: changes
