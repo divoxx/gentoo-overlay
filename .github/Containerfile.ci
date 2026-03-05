@@ -1,6 +1,6 @@
 FROM gentoo/stage3:amd64-systemd
 
-RUN echo "net-libs/nodejs npm" >> /etc/portage/package.use && \
+RUN echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
     emerge-webrsync -q && \
     emerge --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck net-libs/nodejs && \
     npm install -g @anthropic-ai/claude-code
