@@ -31,6 +31,25 @@ jobs:
         id: date
         run: echo "tag=$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
+      - name: Pull existing image for incremental build
+        id: pull
+        continue-on-error: true
+        env:
+          REGISTRY: ghcr.io/${{ github.repository_owner }}
+        run: podman pull "$REGISTRY/gentoo-ci:latest"
+
+      - name: Set base image
+        id: base
+        env:
+          PULL_OUTCOME: ${{ steps.pull.outcome }}
+          REGISTRY: ghcr.io/${{ github.repository_owner }}
+        run: |
+          if [ "$PULL_OUTCOME" = "success" ]; then
+            echo "image=$REGISTRY/gentoo-ci:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=gentoo/stage3:amd64-systemd" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build image
         id: build
         uses: redhat-actions/buildah-build@v2
@@ -39,6 +58,8 @@ jobs:
           tags: latest ${{ steps.date.outputs.tag }}
           containerfiles: .github/Containerfile.ci
           context: .github/
+          build-args: |
+            BASE_IMAGE=${{ steps.base.outputs.image }}
 
       - name: Push image
         uses: redhat-actions/push-to-registry@v2
