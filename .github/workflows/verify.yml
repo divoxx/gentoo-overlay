@@ -69,10 +69,10 @@ jobs:
           set -euo pipefail
 
           OUTPUT=$(timeout 1800 claude --print \
-            --allowedTools "Task,Read,Bash,Glob,Grep" \
             "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
             Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
-            compile phase without installing. Report results.")
+            compile phase without installing. Report results." \
+            --allowedTools "Task,Read,Bash,Glob,Grep")
 
           echo "$OUTPUT"
 
