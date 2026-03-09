@@ -1,4 +1,4 @@
-# gentoo-overlay
+# divoxx-overlay
 
 A personal Gentoo package overlay by [Rodrigo Kochenburger](https://github.com/divoxx) containing packages not available in the [official Gentoo tree](https://packages.gentoo.org/) or the [GURU overlay](https://gpo.zugaina.org/overlays/guru).
 
@@ -18,23 +18,23 @@ A personal Gentoo package overlay by [Rodrigo Kochenburger](https://github.com/d
 ### eselect-repository (recommended)
 
 ```bash
-eselect repository add gentoo-overlay git https://github.com/divoxx/gentoo-overlay.git
-emaint sync -r gentoo-overlay
+eselect repository add divoxx-overlay git https://github.com/divoxx/gentoo-overlay.git
+emaint sync -r divoxx-overlay
 ```
 
 ### repos.conf
 
-Create `/etc/portage/repos.conf/gentoo-overlay.conf`:
+Create `/etc/portage/repos.conf/divoxx-overlay.conf`:
 
 ```ini
-[gentoo-overlay]
-location = /var/db/repos/gentoo-overlay
+[divoxx-overlay]
+location = /var/db/repos/divoxx-overlay
 sync-type = git
 sync-uri = https://github.com/divoxx/gentoo-overlay.git
 auto-sync = yes
 ```
 
-Then run `emaint sync -r gentoo-overlay`.
+Then run `emaint sync -r divoxx-overlay`.
 
 ## Contributing
 

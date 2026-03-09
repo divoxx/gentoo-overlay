@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Identity
 
-- **Overlay name:** `gentoo-overlay`
+- **Overlay name:** `divoxx-overlay`
 - **Type:** Gentoo package overlay
 - **EAPI:** 8 (all packages)
 - **Architecture:** `~amd64` (testing keywords only — never stable)
