@@ -94,6 +94,31 @@ ci: ...
 
 Auto-update PRs (opened by the daily CI bot) are promoted from draft to ready automatically when all checks pass.
 
+### Merge Strategy
+
+PRs are always merged with a **merge commit** — squash and rebase merging are disabled.
+
+**Why merge commits?** A merge commit preserves the exact point where two histories joined. If a conflict was resolved incorrectly, it's immediately visible and bisectable. Squashing or rebasing buries that resolution inside unrelated commits, making mistakes much harder to spot.
+
+#### Cleaning up your commit history
+
+Before opening a PR, use an interactive rebase to tidy up your own commits — squash fixups, reword messages, reorder steps:
+
+```bash
+git rebase -i origin/main
+```
+
+This presents only the commits on your branch that aren't yet in `main`. Any sync merge commits (from a previous `git pull`) are automatically dropped — your commits are simply replayed on top of the current `main`, linearising the branch history.
+
+#### Syncing your branch with main
+
+If `git rebase -i origin/main` hits conflicts and you'd rather not resolve them commit-by-commit, abort and fall back to a plain merge:
+
+```bash
+git rebase --abort
+git pull origin/main   # conflict resolution stays in one explicit merge commit
+```
+
 ## CI/CD Overview
 
 ### `verify.yml` — Runs on every push to non-main branches
