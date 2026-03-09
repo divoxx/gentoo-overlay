@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<longdescription>
+		The Exercism CLI is a command-line tool for interacting with the
+		Exercism platform, enabling users to download exercises and submit
+		solutions across dozens of programming languages.
+	</longdescription>
+	<upstream>
+		<remote-id type="github">exercism/cli</remote-id>
+	</upstream>
+</pkgmetadata>

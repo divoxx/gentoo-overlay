@@ -44,12 +44,42 @@ If you use Claude Code, the `/ebuild-create <url>` skill automates steps 2–6.
 ## Updating an Existing Package
 
 1. Copy the latest ebuild to the new version filename (`<name>-<newver>.ebuild`).
-2. Review for any version-specific changes (hardcoded versions, `CRATES=` lists, Go dep tarballs).
+2. Review for any version-specific changes (hardcoded versions, `CRATES=` lists, `EGO_SUM` arrays for Go packages).
 3. Run `pkgdev manifest`, `pkgcheck scan`, and a build test.
 4. Do not remove the old version — CI prunes beyond 5 automatically.
 5. Submit a PR.
 
 If you use Claude Code, the `/ebuild-update <category/name>` skill automates steps 1–3.
+
+## Language-Specific Notes
+
+### Go Packages
+
+Use `go-module.eclass` with the `EGO_SUM` array — no vendor tarball hosting required. Portage fetches each module individually from the Go module proxy.
+
+**Pattern:**
+```bash
+inherit go-module
+
+EGO_SUM=(
+    "github.com/foo/bar v1.2.3"
+    "github.com/foo/bar v1.2.3/go.mod"
+    # ... one entry per line of go.sum
+)
+
+go-module_set_globals
+
+SRC_URI="https://github.com/org/repo/archive/v${PV}.tar.gz -> ${P}.tar.gz
+    ${EGO_SUM_SRC_URI}"
+```
+
+**Generating `EGO_SUM`:** The array mirrors the upstream `go.sum` file directly — one entry per `<module> <version>` line, including `/go.mod` entries. Use `sed` on the upstream `go.sum` or the `gosum` tool from `dev-go/gosum`.
+
+**When bumping:** regenerate `EGO_SUM` from the new version's `go.sum` — dependency lists change between releases.
+
+**Trade-off:** The `EGO_SUM` array can be hundreds of lines for projects with many dependencies, but requires zero external hosting and matches the pattern used in the official Gentoo tree.
+
+> Note: `go-module_set_globals` and `EGO_SUM` trigger `DeprecatedEclassVariable`/`DeprecatedEclassFunction` warnings from `pkgcheck`. These are expected and acceptable — the eclass has no replacement for this pattern in personal overlays.
 
 ## Engineering Standards
 

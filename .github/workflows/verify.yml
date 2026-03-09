@@ -60,6 +60,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Go (if not in container image)
+        run: |
+          if ! command -v go >/dev/null 2>&1; then
+            curl -sSL https://go.dev/dl/go1.22.5.linux-amd64.tar.gz | tar -C /usr/local -xz
+            ln -sf /usr/local/go/bin/go /usr/local/bin/go
+            ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+          fi
+
       - name: Run ebuild-verifier
         id: verify
         env:
@@ -69,10 +77,10 @@ jobs:
           set -euo pipefail
 
           OUTPUT=$(timeout 1800 claude --print \
-            --allowedTools "Task,Read,Bash,Glob,Grep" \
             "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
             Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
-            compile phase without installing. Report results.")
+            compile phase without installing. Report results." \
+            --allowedTools "Task,Read,Bash,Glob,Grep")
 
           echo "$OUTPUT"
 
