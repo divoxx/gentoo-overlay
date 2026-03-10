@@ -81,6 +81,49 @@ SRC_URI="https://github.com/org/repo/archive/v${PV}.tar.gz -> ${P}.tar.gz
 
 > Note: `go-module_set_globals` and `EGO_SUM` trigger `DeprecatedEclassVariable`/`DeprecatedEclassFunction` warnings from `pkgcheck`. These are expected and acceptable — the eclass has no replacement for this pattern in personal overlays.
 
+## USE Flags
+
+### When to use USE flags
+
+- Optional features or backends that pull in extra dependencies or significantly affect binary size
+- Do **not** add USE flags for features that are always needed or trivially cheap to include
+- Prefer USE flags over compile-time stubs when upstream already gates the feature with a cargo/meson/cmake feature flag
+
+### Defaults
+
+- Use `+flag` in `IUSE` for features that most users will want (e.g. `+imap`, `+smtp`)
+- Leave niche or heavyweight features off by default (e.g. `notmuch`, `pgp-native`)
+- Add an inline comment when the default is non-obvious
+
+### Naming
+
+- Mirror the upstream feature/option name exactly where possible — avoids confusion when cross-referencing upstream docs
+- Use lowercase kebab-case (e.g. `pgp-native`, not `pgpnative` or `pgp_native`)
+
+### Wiring in ebuilds
+
+- **Cargo (Rust):** use `usev <flag>` in a `myfeatures=()` array — emits the flag name when enabled, empty string when not:
+  ```bash
+  myfeatures=(
+      $(usev imap)
+      $(usev smtp)
+  )
+  cargo_src_compile -- $(printf -- '--feature=%s ' "${myfeatures[@]}")
+  ```
+- **Autotools/meson/cmake:** use `use_with` / `use_enable` helpers
+- **Conditional deps:** `flag? ( dep )` in `RDEPEND`/`DEPEND`
+
+### Documenting in metadata.xml
+
+Every USE flag **must** have a `<flag name="...">` entry in `metadata.xml`. Keep descriptions concise (one line), starting with a verb:
+
+```xml
+<use>
+    <flag name="imap">Enable IMAP backend support</flag>
+    <flag name="smtp">Enable SMTP backend support</flag>
+</use>
+```
+
 ## Engineering Standards
 
 1. **EAPI 8 only** — All ebuilds use `EAPI=8`.
