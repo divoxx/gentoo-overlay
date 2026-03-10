@@ -3,5 +3,5 @@ FROM ${BASE_IMAGE}
 
 RUN echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
     emerge-webrsync -q && \
-    emerge --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck net-libs/nodejs dev-lang/go && \
+    emerge --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck net-libs/nodejs dev-lang/go dev-lang/rust-bin && \
     npm install -g @anthropic-ai/claude-code
