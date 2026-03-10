@@ -591,13 +591,14 @@ LICENSE+="
 "
 SLOT="0"
 KEYWORDS="~amd64"
-IUSE="notmuch oauth2 pgp-gpg pgp-native"
+IUSE="+imap maildir notmuch +oauth2 pgp-commands pgp-gpg pgp-native sendmail +smtp +wizard"
 
 RDEPEND="
 	dev-libs/libgit2:=
 	sys-apps/dbus:=
 	notmuch? ( net-mail/notmuch:= )
 	pgp-gpg? ( app-crypt/gpgme:= )
+	sendmail? ( virtual/mta )
 "
 DEPEND="${RDEPEND}"
 BDEPEND="
@@ -608,16 +609,16 @@ QA_FLAGS_IGNORED="usr/bin/himalaya"
 
 src_configure() {
 	local myfeatures=(
-		imap
-		maildir
-		smtp
-		sendmail
-		wizard
-		pgp-commands
+		$(usev imap)
+		$(usev maildir)
 		$(usev notmuch)
 		$(usev oauth2)
+		$(usev pgp-commands)
 		$(usev pgp-gpg)
 		$(usev pgp-native)
+		$(usev sendmail)
+		$(usev smtp)
+		$(usev wizard)
 	)
 	cargo_src_configure
 }
