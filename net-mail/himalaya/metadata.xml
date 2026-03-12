@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">pimalaya/himalaya</remote-id>
+	</upstream>
+	<use>
+		<flag name="imap">Enable IMAP backend support</flag>
+		<flag name="maildir">Enable Maildir backend support</flag>
+		<flag name="notmuch">Enable Notmuch mail indexing backend support</flag>
+		<flag name="oauth2">Enable OAuth2 authentication support (requires keyring)</flag>
+		<flag name="pgp-commands">Enable PGP support via external commands (e.g. gpg CLI)</flag>
+		<flag name="pgp-gpg">Enable PGP support via GPGME (system GPG)</flag>
+		<flag name="pgp-native">Enable native Rust PGP implementation support</flag>
+		<flag name="sendmail">Enable sending via the system sendmail binary</flag>
+		<flag name="smtp">Enable SMTP sending support</flag>
+		<flag name="wizard">Enable the interactive account setup wizard</flag>
+	</use>
+</pkgmetadata>
