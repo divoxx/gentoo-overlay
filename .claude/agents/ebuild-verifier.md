@@ -56,16 +56,16 @@ pkgcheck scan <category/name>
 Run:
 
 ```
-ebuild <path-to-ebuild> clean fetch unpack prepare configure compile
+ebuild <path-to-ebuild> clean fetch unpack prepare configure compile install
 ```
 
-This builds the package through the compile phase without merging it to the live filesystem.
+This builds the package through the install phase. The `install` phase writes into a staging image directory (`${D}`) and does not touch the live filesystem. Do NOT run the `merge` phase.
 
 - If `clean` fails, ignore and proceed.
 - If `fetch` fails due to a network issue, report it and note that the fetch step could not be verified.
-- Report success or failure of each phase: `unpack`, `prepare`, `configure`, `compile`.
+- Report success or failure of each phase: `unpack`, `prepare`, `configure`, `compile`, `install`.
 - If the build fails, examine the error output, identify the cause (missing dependency, patch failure, configure error, compiler error, etc.), and report it clearly.
-- Do NOT run `install` or `merge` phases.
+- Do NOT run the `merge` phase.
 
 ### 5. Report
 
@@ -86,6 +86,7 @@ Provide a structured summary:
 - prepare:   [OK / FAILED]
 - configure: [OK / FAILED]
 - compile:   [OK / FAILED]
+- install:   [OK / FAILED]
 
 ### Overall: PASS / FAIL
 <Summary of any action required>

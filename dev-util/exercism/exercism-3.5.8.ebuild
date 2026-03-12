@@ -515,10 +515,10 @@ SLOT="0"
 KEYWORDS="~amd64"
 
 src_compile() {
-	ego build -o exercism ./exercism
+	ego build -o bin/exercism ./exercism
 }
 
 src_install() {
-	dobin exercism
+	dobin bin/exercism
 	dodoc README.md
 }
