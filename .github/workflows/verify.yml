@@ -76,15 +76,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          OUTPUT=$(timeout 1800 claude --print \
+          OUTFILE=$(mktemp)
+          timeout 1800 claude --print \
             "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
             Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
             compile phase without installing. Report results." \
-            --allowedTools "Task,Read,Bash,Glob,Grep")
+            --allowedTools "Task,Read,Bash,Glob,Grep" | tee "$OUTFILE"
 
-          echo "$OUTPUT"
-
-          if echo "$OUTPUT" | grep -qF "Overall: PASS"; then
+          if grep -qF "Overall: PASS" "$OUTFILE"; then
             echo "result=pass" >> "$GITHUB_OUTPUT"
           else
             echo "result=fail" >> "$GITHUB_OUTPUT"
