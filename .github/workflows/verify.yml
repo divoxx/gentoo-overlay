@@ -81,7 +81,7 @@ jobs:
             "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
             Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
             compile phase without installing. Report results." \
-            --allowedTools "Task,Read,Bash,Glob,Grep" | tee "$OUTFILE"
+            --allowedTools "Agent,Read,Bash,Glob,Grep" | tee "$OUTFILE"
 
           if grep -qF "Overall: PASS" "$OUTFILE"; then
             echo "result=pass" >> "$GITHUB_OUTPUT"
