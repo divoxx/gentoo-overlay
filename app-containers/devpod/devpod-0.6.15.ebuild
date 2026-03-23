@@ -803,7 +803,7 @@ SLOT="0"
 KEYWORDS="~amd64"
 
 src_compile() {
-	ego build -ldflags "-s -w" -o devpod .
+	CGO_ENABLED=0 ego build -ldflags "-s -w" -o devpod .
 }
 
 src_install() {
