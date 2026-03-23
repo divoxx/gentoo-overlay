@@ -83,7 +83,7 @@ jobs:
             compile phase without installing. Report results." \
             --allowedTools "Agent,Read,Bash,Glob,Grep" | tee "$OUTFILE"
 
-          if grep -qF "Overall: PASS" "$OUTFILE"; then
+          if grep -qE "Overall:.*PASS" "$OUTFILE"; then
             echo "result=pass" >> "$GITHUB_OUTPUT"
           else
             echo "result=fail" >> "$GITHUB_OUTPUT"
