@@ -236,6 +236,10 @@ echo "failure: <one-line reason>" > /tmp/ci-debugger-result
 - **Never** run `emerge`, `ebuild`, `pkgcheck`, or `pkgdev` — this runner is `ubuntu-latest` without a Gentoo environment.
 - **Never** open more than one PR or one Issue per invocation.
 - **Never** modify files under `.claude/` (agents, settings, skills).
-- **Never** modify files under `.github/workflows/` — `GITHUB_TOKEN` cannot push workflow file changes (requires a PAT with `workflow` scope). If the fix requires a workflow change, open a GitHub Issue describing the needed change instead of attempting a push.
+- **Never** modify files under `.github/workflows/` — `GITHUB_TOKEN` cannot push workflow file changes (requires a PAT with `workflow` scope). If the fix requires a workflow change, print the full diagnosis and the exact change needed to stdout, then write a failure result and stop:
+  ```bash
+  echo "failure: workflow file change required — <one-line description of the fix>" > /tmp/ci-debugger-result
+  ```
+  The job will fail visibly and the diagnosis will appear in the Actions log.
 - For verify failures: push to the existing auto-update branch, never create a new PR.
 - If in doubt between fixable and transient, choose transient.
