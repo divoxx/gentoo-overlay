@@ -5,6 +5,7 @@ on:
     workflows:
       - "Build CI Image"
       - "Auto-Update Ebuilds"
+      - "Verify Ebuilds"
     types:
       - completed
 
@@ -16,7 +17,16 @@ permissions:
 
 jobs:
   debug:
-    if: github.event.workflow_run.conclusion == 'failure'
+    # For Build CI Image / Auto-Update Ebuilds: trigger on any failure.
+    # For Verify Ebuilds: only trigger on auto-update/** branches — those are
+    # the automated PRs we want to self-heal. Manual or ci-fix branches are
+    # excluded to prevent loops.
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      (
+        github.event.workflow_run.name != 'Verify Ebuilds' ||
+        startsWith(github.event.workflow_run.head_branch, 'auto-update/')
+      )
     runs-on: ubuntu-latest
 
     steps:
@@ -39,31 +49,69 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
 
-      - name: Check for existing fix PR (idempotency)
+      - name: Checkout target branch (verify failures only)
+        if: github.event.workflow_run.name == 'Verify Ebuilds'
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$HEAD_BRANCH"
+          git checkout "$HEAD_BRANCH"
+
+      - name: Check for existing fix (idempotency)
         id: idempotency
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -euo pipefail
-          SLUG=$(echo "$WORKFLOW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
-          DATE=$(date +%Y-%m-%d)
-          BRANCH="ci-fix/${SLUG}-${DATE}"
-          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
 
-          EXISTING=$(gh pr list \
-            --head "$BRANCH" \
-            --state open \
-            --json number \
-            --repo "$REPO" \
-            -q '.[0].number // empty')
+          if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ]; then
+            # Only self-heal PRs that were actually opened by the auto-update bot.
+            # This guards against a human branch named auto-update/* triggering the debugger.
+            PR_AUTHOR=$(gh pr list \
+              --head "$HEAD_BRANCH" \
+              --state open \
+              --json author \
+              --repo "$REPO" \
+              -q '.[0].author.login // empty')
 
-          if [ -n "${EXISTING:-}" ]; then
-            echo "Fix PR #$EXISTING already open for $BRANCH — skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ]; then
+              echo "PR on $HEAD_BRANCH was not created by github-actions[bot] (got: ${PR_AUTHOR:-none}) — skipping"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              # Skip if the last commit is already a bot fix to prevent infinite retry loops.
+              LAST_MSG=$(git log -1 --format='%s' 2>/dev/null || echo "")
+              if [[ "$LAST_MSG" == "ci: fix"* ]]; then
+                echo "Last commit is already a bot fix attempt — skipping to avoid loop"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "branch=${HEAD_BRANCH}" >> "$GITHUB_OUTPUT"
+                echo "skip=false" >> "$GITHUB_OUTPUT"
+              fi
+            fi
           else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            # For build-image / auto-update failures: skip if a ci-fix PR already exists today.
+            SLUG=$(echo "$WORKFLOW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+            DATE=$(date +%Y-%m-%d)
+            BRANCH="ci-fix/${SLUG}-${DATE}"
+            echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+            EXISTING=$(gh pr list \
+              --head "$BRANCH" \
+              --state open \
+              --json number \
+              --repo "$REPO" \
+              -q '.[0].number // empty')
+
+            if [ -n "${EXISTING:-}" ]; then
+              echo "Fix PR #$EXISTING already open for $BRANCH — skipping"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Fetch failure logs
@@ -86,6 +134,7 @@ jobs:
           RUN_ID: ${{ github.event.workflow_run.id }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           FIX_BRANCH: ${{ steps.idempotency.outputs.branch }}
         run: |
           set -euo pipefail
@@ -99,6 +148,7 @@ jobs:
             "- Run ID: ${RUN_ID}" \
             "- Run URL: ${RUN_URL}" \
             "- Repository: ${REPO}" \
+            "- Head branch (branch that triggered the failure): ${HEAD_BRANCH}" \
             "- Fix branch to use if fixable: ${FIX_BRANCH}" \
             "" \
             "## Failed Job Logs (last 50 000 chars)" \
