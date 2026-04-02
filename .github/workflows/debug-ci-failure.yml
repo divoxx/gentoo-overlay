@@ -212,3 +212,12 @@ jobs:
             '```' \
             | timeout 1800 claude --print \
                 --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch"
+
+          # Fail the job if the agent did not write a success result.
+          # This catches push failures, agent crashes, and cases where the
+          # agent gave up without taking any action.
+          RESULT=$(cat /tmp/ci-debugger-result 2>/dev/null || echo "")
+          if [[ "$RESULT" != "success"* ]]; then
+            echo "::error::ci-debugger did not complete successfully: ${RESULT:-no result written}"
+            exit 1
+          fi
