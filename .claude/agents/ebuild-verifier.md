@@ -53,16 +53,24 @@ pkgcheck scan <category/name>
 
 ### 4. Build Verification
 
-Run:
+Run the phases in two separate commands. **Never run the full pipeline in a single command and never run any command in the background.**
 
+**Step 1 — fetch** (output is extremely verbose for Go/Rust packages; redirect to a log file):
+
+```bash
+ebuild <path-to-ebuild> clean fetch >/tmp/fetch.log 2>&1 \
+  && echo "fetch: OK" \
+  || { echo "fetch: FAILED"; tail -30 /tmp/fetch.log; }
 ```
-ebuild <path-to-ebuild> clean fetch unpack prepare configure compile
+
+**Step 2 — build phases** (run synchronously, capture output directly):
+
+```bash
+ebuild <path-to-ebuild> unpack prepare configure compile
 ```
 
 This builds the package through the compile phase without merging it to the live filesystem.
 
-- If `clean` fails, ignore and proceed.
-- If `fetch` fails due to a network issue, report it and note that the fetch step could not be verified.
 - Report success or failure of each phase: `unpack`, `prepare`, `configure`, `compile`.
 - If the build fails, examine the error output, identify the cause (missing dependency, patch failure, configure error, compiler error, etc.), and report it clearly.
 - Do NOT run `install` or `merge` phases.
