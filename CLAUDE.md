@@ -30,6 +30,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ├── docs/plans/                  # Point-in-time design documents (historical, not authoritative)
 ├── .github/workflows/
 │   ├── auto-update.yml          # Daily upstream version check and bump
+│   ├── build-image.yml          # Weekly CI container image build
+│   ├── debug-ci-failure.yml     # Auto-debug and fix CI failures via Claude agent
 │   └── verify.yml               # pkgcheck QA + build verification on every PR branch
 └── .claude/
     ├── agents/                  # Specialized AI agents for ebuild work
@@ -54,3 +56,4 @@ Always delegate to the appropriate agent for ebuild work. Do not write or modify
 | Create a new ebuild from scratch | `ebuild-writer` | `/ebuild-create <url>` |
 | Bump an existing ebuild to a new version | `ebuild-updater` | `/ebuild-update <category/name>` |
 | Verify an ebuild (QA + build test) | `ebuild-verifier` | `/ebuild-verify <category/name>` |
+| Debug a CI workflow failure | `ci-debugger` | (invoked automatically by `debug-ci-failure.yml`) |

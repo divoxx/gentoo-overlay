@@ -1,0 +1,109 @@
+name: Debug CI Failure
+
+on:
+  workflow_run:
+    workflows:
+      - "Build CI Image"
+      - "Auto-Update Ebuilds"
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  debug:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        env:
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+
+      - name: Check for existing fix PR (idempotency)
+        id: idempotency
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          set -euo pipefail
+          SLUG=$(echo "$WORKFLOW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+          DATE=$(date +%Y-%m-%d)
+          BRANCH="ci-fix/${SLUG}-${DATE}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+          EXISTING=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number \
+            --repo "$REPO" \
+            -q '.[0].number // empty')
+
+          if [ -n "${EXISTING:-}" ]; then
+            echo "Fix PR #$EXISTING already open for $BRANCH — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch failure logs
+        if: steps.idempotency.outputs.skip == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          gh run view "$RUN_ID" --log-failed --repo "$REPO" 2>&1 \
+            | tail -c 50000 > /tmp/failure-logs.txt || true
+
+      - name: Run ci-debugger agent
+        if: steps.idempotency.outputs.skip == 'false'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          FIX_BRANCH: ${{ steps.idempotency.outputs.branch }}
+        run: |
+          set -euo pipefail
+          LOGS=$(cat /tmp/failure-logs.txt)
+
+          printf '%s\n' \
+            "Use the ci-debugger agent to analyze a CI workflow failure and either fix it or explain it." \
+            "" \
+            "## Context" \
+            "- Workflow: ${WORKFLOW_NAME}" \
+            "- Run ID: ${RUN_ID}" \
+            "- Run URL: ${RUN_URL}" \
+            "- Repository: ${REPO}" \
+            "- Fix branch to use if fixable: ${FIX_BRANCH}" \
+            "" \
+            "## Failed Job Logs (last 50 000 chars)" \
+            '```' \
+            "${LOGS}" \
+            '```' \
+            | timeout 1800 claude --print \
+                --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch"
