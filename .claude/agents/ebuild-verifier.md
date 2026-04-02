@@ -1,6 +1,6 @@
 ---
 name: ebuild-verifier
-description: Verifies Gentoo ebuilds by running pkgcheck QA scans and performing a build test (compile without install).
+description: Verifies Gentoo ebuilds by running pkgcheck QA scans and performing a build test (compile and install).
 tools:
   - Read
   - Bash
@@ -66,14 +66,14 @@ ebuild <path-to-ebuild> clean fetch >/tmp/fetch.log 2>&1 \
 **Step 2 — build phases** (run synchronously, capture output directly):
 
 ```bash
-ebuild <path-to-ebuild> unpack prepare configure compile
+ebuild <path-to-ebuild> unpack prepare configure compile install
 ```
 
-This builds the package through the compile phase without merging it to the live filesystem.
+This builds the package through the install phase. The `install` phase writes into a staging image directory (`${D}`) and does not touch the live filesystem. Do NOT run the `merge` phase.
 
-- Report success or failure of each phase: `unpack`, `prepare`, `configure`, `compile`.
+- Report success or failure of each phase: `unpack`, `prepare`, `configure`, `compile`, `install`.
 - If the build fails, examine the error output, identify the cause (missing dependency, patch failure, configure error, compiler error, etc.), and report it clearly.
-- Do NOT run `install` or `merge` phases.
+- Do NOT run the `merge` phase.
 
 ### 5. Report
 
@@ -94,6 +94,7 @@ Provide a structured summary:
 - prepare:   [OK / FAILED]
 - configure: [OK / FAILED]
 - compile:   [OK / FAILED]
+- install:   [OK / FAILED]
 
 ### Overall: PASS / FAIL
 <Summary of any action required>
