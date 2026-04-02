@@ -8,6 +8,20 @@ on:
       - "Verify Ebuilds"
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      workflow_name:
+        description: 'Name of the failed workflow (e.g. "Verify Ebuilds")'
+        required: true
+        type: string
+      run_id:
+        description: 'Run ID of the failed workflow run'
+        required: true
+        type: string
+      head_branch:
+        description: 'Branch that triggered the failure (e.g. auto-update/dev-util-worktrunk)'
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -17,15 +31,16 @@ permissions:
 
 jobs:
   debug:
-    # For Build CI Image / Auto-Update Ebuilds: trigger on any failure.
-    # For Verify Ebuilds: only trigger on auto-update/** branches — those are
-    # the automated PRs we want to self-heal. Manual or ci-fix branches are
-    # excluded to prevent loops.
+    # workflow_run: only fire for failures, and gate Verify Ebuilds to auto-update/** branches.
+    # workflow_dispatch: always run — the human explicitly requested it.
     if: |
-      github.event.workflow_run.conclusion == 'failure' &&
+      github.event_name == 'workflow_dispatch' ||
       (
-        github.event.workflow_run.name != 'Verify Ebuilds' ||
-        startsWith(github.event.workflow_run.head_branch, 'auto-update/')
+        github.event.workflow_run.conclusion == 'failure' &&
+        (
+          github.event.workflow_run.name != 'Verify Ebuilds' ||
+          startsWith(github.event.workflow_run.head_branch, 'auto-update/')
+        )
       )
     runs-on: ubuntu-latest
 
@@ -49,10 +64,43 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
 
-      - name: Checkout target branch (verify failures only)
-        if: github.event.workflow_run.name == 'Verify Ebuilds'
+      - name: Resolve context
+        id: ctx
         env:
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          WR_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WR_RUN_ID: ${{ github.event.workflow_run.id }}
+          WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WR_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          WD_WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
+          WD_RUN_ID: ${{ github.event.inputs.run_id }}
+          WD_HEAD_BRANCH: ${{ github.event.inputs.head_branch }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            WORKFLOW_NAME="$WD_WORKFLOW_NAME"
+            RUN_ID="$WD_RUN_ID"
+            HEAD_BRANCH="$WD_HEAD_BRANCH"
+            RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+            MANUAL=true
+          else
+            WORKFLOW_NAME="$WR_WORKFLOW_NAME"
+            RUN_ID="$WR_RUN_ID"
+            HEAD_BRANCH="$WR_HEAD_BRANCH"
+            RUN_URL="$WR_RUN_URL"
+            MANUAL=false
+          fi
+          echo "workflow_name=${WORKFLOW_NAME}" >> "$GITHUB_OUTPUT"
+          echo "run_id=${RUN_ID}"               >> "$GITHUB_OUTPUT"
+          echo "head_branch=${HEAD_BRANCH}"      >> "$GITHUB_OUTPUT"
+          echo "run_url=${RUN_URL}"              >> "$GITHUB_OUTPUT"
+          echo "manual=${MANUAL}"                >> "$GITHUB_OUTPUT"
+
+      - name: Checkout target branch (verify failures only)
+        if: steps.ctx.outputs.workflow_name == 'Verify Ebuilds'
+        env:
+          HEAD_BRANCH: ${{ steps.ctx.outputs.head_branch }}
         run: |
           set -euo pipefail
           git fetch origin "$HEAD_BRANCH"
@@ -63,34 +111,40 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_NAME: ${{ steps.ctx.outputs.workflow_name }}
+          HEAD_BRANCH: ${{ steps.ctx.outputs.head_branch }}
+          MANUAL: ${{ steps.ctx.outputs.manual }}
         run: |
           set -euo pipefail
 
           if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ]; then
-            # Only self-heal PRs that were actually opened by the auto-update bot.
-            # This guards against a human branch named auto-update/* triggering the debugger.
-            PR_AUTHOR=$(gh pr list \
-              --head "$HEAD_BRANCH" \
-              --state open \
-              --json author \
-              --repo "$REPO" \
-              -q '.[0].author.login // empty')
+            # For manual dispatch, skip the PR-author check — the human explicitly requested this run.
+            if [ "$MANUAL" != "true" ]; then
+              # Only self-heal PRs that were actually opened by the auto-update bot.
+              # This guards against a human branch named auto-update/* triggering the debugger.
+              PR_AUTHOR=$(gh pr list \
+                --head "$HEAD_BRANCH" \
+                --state open \
+                --json author \
+                --repo "$REPO" \
+                -q '.[0].author.login // empty')
 
-            if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ]; then
-              echo "PR on $HEAD_BRANCH was not created by github-actions[bot] (got: ${PR_AUTHOR:-none}) — skipping"
+              if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ]; then
+                echo "PR on $HEAD_BRANCH was not created by github-actions[bot] (got: ${PR_AUTHOR:-none}) — skipping"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            fi
+
+            # Skip if the last commit is already a bot fix to prevent infinite retry loops.
+            # Manual dispatch bypasses this — the human wants a fresh attempt.
+            LAST_MSG=$(git log -1 --format='%s' 2>/dev/null || echo "")
+            if [ "$MANUAL" != "true" ] && [[ "$LAST_MSG" == "ci: fix"* ]]; then
+              echo "Last commit is already a bot fix attempt — skipping to avoid loop"
               echo "skip=true" >> "$GITHUB_OUTPUT"
             else
-              # Skip if the last commit is already a bot fix to prevent infinite retry loops.
-              LAST_MSG=$(git log -1 --format='%s' 2>/dev/null || echo "")
-              if [[ "$LAST_MSG" == "ci: fix"* ]]; then
-                echo "Last commit is already a bot fix attempt — skipping to avoid loop"
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-              else
-                echo "branch=${HEAD_BRANCH}" >> "$GITHUB_OUTPUT"
-                echo "skip=false" >> "$GITHUB_OUTPUT"
-              fi
+              echo "branch=${HEAD_BRANCH}" >> "$GITHUB_OUTPUT"
+              echo "skip=false" >> "$GITHUB_OUTPUT"
             fi
           else
             # For build-image / auto-update failures: skip if a ci-fix PR already exists today.
@@ -119,7 +173,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ID: ${{ steps.ctx.outputs.run_id }}
         run: |
           set -euo pipefail
           gh run view "$RUN_ID" --log-failed --repo "$REPO" 2>&1 \
@@ -131,10 +185,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          RUN_URL: ${{ github.event.workflow_run.html_url }}
-          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_ID: ${{ steps.ctx.outputs.run_id }}
+          RUN_URL: ${{ steps.ctx.outputs.run_url }}
+          WORKFLOW_NAME: ${{ steps.ctx.outputs.workflow_name }}
+          HEAD_BRANCH: ${{ steps.ctx.outputs.head_branch }}
           FIX_BRANCH: ${{ steps.idempotency.outputs.branch }}
         run: |
           set -euo pipefail
