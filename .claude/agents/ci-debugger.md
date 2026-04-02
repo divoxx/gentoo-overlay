@@ -103,7 +103,17 @@ git push origin "$HEAD_BRANCH" --force-with-lease
 
 The existing PR will pick up the new commit automatically. Do NOT open a new PR.
 
-After pushing, print a summary of what was wrong and what was fixed.
+After a successful push, write the result and print a summary:
+
+```bash
+echo "success: fix pushed to $HEAD_BRANCH" > /tmp/ci-debugger-result
+```
+
+If the push fails or you cannot determine a fix, write a failure result before stopping:
+
+```bash
+echo "failure: <one-line reason>" > /tmp/ci-debugger-result
+```
 
 ---
 
@@ -178,7 +188,17 @@ gh pr create \
   --repo "$REPO"
 ```
 
-After opening the PR, print a short summary of what you found and fixed.
+After a successful push and PR creation, write the result and print a summary:
+
+```bash
+echo "success: PR opened at <pr-url>" > /tmp/ci-debugger-result
+```
+
+If the push or PR creation fails, write a failure result before stopping:
+
+```bash
+echo "failure: <one-line reason>" > /tmp/ci-debugger-result
+```
 
 ---
 
@@ -196,6 +216,18 @@ gh issue create \
 
 If the `ci-transient` label does not exist, omit `--label` — do not attempt to create labels.
 
+After a successful issue creation, write the result:
+
+```bash
+echo "success: transient issue opened" > /tmp/ci-debugger-result
+```
+
+If issue creation fails, write a failure result before stopping:
+
+```bash
+echo "failure: <one-line reason>" > /tmp/ci-debugger-result
+```
+
 ---
 
 ## Constraints
@@ -204,5 +236,6 @@ If the `ci-transient` label does not exist, omit `--label` — do not attempt to
 - **Never** run `emerge`, `ebuild`, `pkgcheck`, or `pkgdev` — this runner is `ubuntu-latest` without a Gentoo environment.
 - **Never** open more than one PR or one Issue per invocation.
 - **Never** modify files under `.claude/` (agents, settings, skills).
+- **Never** modify files under `.github/workflows/` — `GITHUB_TOKEN` cannot push workflow file changes (requires a PAT with `workflow` scope). If the fix requires a workflow change, open a GitHub Issue describing the needed change instead of attempting a push.
 - For verify failures: push to the existing auto-update branch, never create a new PR.
 - If in doubt between fixable and transient, choose transient.
