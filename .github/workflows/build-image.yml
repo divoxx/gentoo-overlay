@@ -58,6 +58,7 @@ jobs:
           tags: latest ${{ steps.date.outputs.tag }}
           containerfiles: .github/Containerfile.ci
           context: .github/
+          extra-args: --squash
           build-args: |
             BASE_IMAGE=${{ steps.base.outputs.image }}
 
