@@ -1,8 +1,6 @@
 ARG BASE_IMAGE=gentoo/stage3:amd64-systemd
 FROM ${BASE_IMAGE}
 
-RUN echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
-    emerge --sync && \
+RUN emerge --sync && \
     emerge -uvDN --with-bdeps=y --quiet-build @world && \
-    emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli net-libs/nodejs dev-lang/go dev-lang/rust-bin && \
-    npm install -g @anthropic-ai/claude-code
+    emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin
