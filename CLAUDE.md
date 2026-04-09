@@ -55,5 +55,5 @@ Always delegate to the appropriate agent for ebuild work. Do not write or modify
 |------|-------|-------|
 | Create a new ebuild from scratch | `ebuild-writer` | `/ebuild-create <url>` |
 | Bump an existing ebuild to a new version | `ebuild-updater` | `/ebuild-update <category/name>` |
-| Verify an ebuild (QA + build test) | `ebuild-verifier` | `/ebuild-verify <category/name>` |
+| Verify an ebuild (QA + build test) | `scripts/verify-ebuild.sh` | `/ebuild-verify <category/name>` |
 | Debug a CI workflow failure | `ci-debugger` | (invoked automatically by `debug-ci-failure.yml`) |
