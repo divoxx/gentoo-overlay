@@ -72,6 +72,7 @@ jobs:
 
       - name: Run ebuild-verifier
         id: verify
+        shell: bash
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PACKAGE: ${{ matrix.package }}
@@ -83,7 +84,7 @@ jobs:
             "Use the ebuild-verifier agent to run full verification for $PACKAGE. \
             Regenerate the Manifest if needed, run pkgcheck QA scan, and build through the \
             install phase without merging to the live filesystem. Report results." \
-            --allowedTools "Agent,Read,Bash,Glob,Grep" | tee "$OUTFILE"
+            --allowedTools "Agent,Read,Bash,Glob,Grep" 2>&1 | tee "$OUTFILE"
 
           if grep -qE "(Overall|Verification( Results)?):.*PASS" "$OUTFILE"; then
             echo "result=pass" >> "$GITHUB_OUTPUT"
