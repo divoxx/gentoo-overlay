@@ -39,10 +39,17 @@ jobs:
       fail-fast: false
 
     steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.BOT_APP_ID }}
+          private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.bot-token.outputs.token }}
 
       - name: Sync Portage tree
         run: emerge --sync -q
@@ -50,19 +57,14 @@ jobs:
       - name: Configure git
         env:
           REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
+          BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/$REPO.git"
-
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
-          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
-          git config --global user.signingkey "$KEY_ID"
-          git config --global commit.gpgsign true
+          git config --global user.name "divoxx-bot[bot]"
+          git config --global user.email "${BOT_APP_ID}+divoxx-bot[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:$BOT_TOKEN@github.com/$REPO.git"
 
       - name: Run ebuild-updater
         env:
