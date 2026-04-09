@@ -84,16 +84,15 @@ echo "Manifest: OK"
 # 2/4: pkgcheck QA scan
 # ---------------------------------------------------------------------------
 
-step "2/4: pkgcheck QA scan (errors only, warnings allowed)"
+step "2/4: pkgcheck QA scan"
 
-# --exit error: exit 1 only on error-level findings; warnings (e.g. DeprecatedEclassVariable
-# from go-module.eclass) are shown but do not block.
 # Run from overlay root so pkgcheck resolves the repo correctly.
+# Any finding (warning or error) is treated as a failure.
 PKGCHECK_EXIT=0
-(cd "$OVERLAY_ROOT" && pkgcheck scan --exit error "$CATEGORY/$NAME") || PKGCHECK_EXIT=$?
-[[ $PKGCHECK_EXIT -eq 0 ]] || die "pkgcheck found errors in $ATOM"
+(cd "$OVERLAY_ROOT" && pkgcheck scan "$CATEGORY/$NAME") || PKGCHECK_EXIT=$?
+[[ $PKGCHECK_EXIT -eq 0 ]] || die "pkgcheck found issues in $ATOM"
 
-echo "pkgcheck: OK"
+echo "pkgcheck: OK (no issues)"
 
 # ---------------------------------------------------------------------------
 # 3/4: Fetch
