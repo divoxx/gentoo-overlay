@@ -9,9 +9,13 @@ A personal Gentoo package overlay by [Rodrigo Kochenburger](https://github.com/d
 
 | Package | Description |
 |---------|-------------|
+| `app-containers/devpod` | Client-only tool for reproducible dev environments via devcontainer.json |
 | `dev-python/mslex` | Windows-compatible shell lexer (shlex for cmd.exe) |
 | `dev-python/oslex` | OS-aware shell lexer (wraps mslex on Windows, shlex elsewhere) |
+| `dev-util/exercism` | CLI client for exercism.io — learning programming through practice |
 | `dev-util/ufbt` | Micro Flipper Build Tool — SDK for Flipper Zero app development |
+| `dev-util/worktrunk` | CLI for git worktree management, designed for running AI agents in parallel |
+| `net-mail/himalaya` | CLI email client |
 
 ## Usage
 
