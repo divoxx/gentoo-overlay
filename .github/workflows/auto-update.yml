@@ -52,7 +52,9 @@ jobs:
           token: ${{ steps.bot-token.outputs.token }}
 
       - name: Sync Portage tree
-        run: emerge --sync -q
+        run: |
+          emerge --sync -q || emerge --sync -q
+          eselect news read all
 
       - name: Configure git
         env:
