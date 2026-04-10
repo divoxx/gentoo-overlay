@@ -129,9 +129,12 @@ jobs:
                 '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
             else
               MODE=$(git ls-files --stage "$file" | awk '{print $1}')
-              CONTENT=$(base64 -w0 < "$file")
+              # Use a temp file to avoid "Argument list too long" for large files
+              TMPJSON=$(mktemp)
+              base64 -w0 < "$file" | jq -Rs '{"encoding":"base64","content":.}' > "$TMPJSON"
               BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
-                --method POST -f encoding=base64 -f "content=$CONTENT" --jq '.sha')
+                --method POST --input "$TMPJSON" --jq '.sha')
+              rm -f "$TMPJSON"
               ENTRIES=$(echo "$ENTRIES" | jq \
                 --arg path "$file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
                 '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
