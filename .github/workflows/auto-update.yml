@@ -107,16 +107,63 @@ jobs:
         id: push
         env:
           PACKAGE: ${{ matrix.package }}
+          REPO: ${{ github.repository }}
+          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
         run: |
           set -euo pipefail
           CATEGORY="${PACKAGE%%/*}"
           NAME="${PACKAGE##*/}"
           BRANCH="auto-update/${CATEGORY}-${NAME}"
 
-          git checkout -b "$BRANCH"
+          # Stage all changes in the package directory
           git add "${CATEGORY}/${NAME}/"
-          git commit -m "auto-update: bump $PACKAGE"
-          git push origin "$BRANCH" --force-with-lease
+
+          # Build GitHub API tree entries for each staged file.
+          # Commits created via the API are auto-signed by GitHub (shows as Verified).
+          ENTRIES='[]'
+          while IFS=$'\t' read -r status file; do
+            if [[ "$status" == "D" ]]; then
+              # Deleted file: null sha removes it from the tree
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$file" \
+                '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
+            else
+              MODE=$(git ls-files --stage "$file" | awk '{print $1}')
+              CONTENT=$(base64 -w0 < "$file")
+              BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
+                --method POST -f encoding=base64 -f "content=$CONTENT" --jq '.sha')
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
+                '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
+            fi
+          done < <(git diff --cached --name-status)
+
+          PARENT_SHA=$(git rev-parse HEAD)
+          BASE_TREE=$(git rev-parse "HEAD^{tree}")
+
+          NEW_TREE=$(jq -n \
+            --arg base_tree "$BASE_TREE" \
+            --argjson tree "$ENTRIES" \
+            '{"base_tree": $base_tree, "tree": $tree}' | \
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/trees" \
+              --method POST --input - --jq '.sha')
+
+          NEW_COMMIT=$(jq -n \
+            --arg message "auto-update: bump $PACKAGE" \
+            --arg tree "$NEW_TREE" \
+            --arg parent "$PARENT_SHA" \
+            '{"message": $message, "tree": $tree, "parents": [$parent]}' | \
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/commits" \
+              --method POST --input - --jq '.sha')
+
+          # Update existing branch ref or create it
+          if GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs/heads/$BRANCH" &>/dev/null; then
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs/heads/$BRANCH" \
+              --method PATCH -F force=true -f sha="$NEW_COMMIT"
+          else
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs" \
+              --method POST -f ref="refs/heads/$BRANCH" -f sha="$NEW_COMMIT"
+          fi
 
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
