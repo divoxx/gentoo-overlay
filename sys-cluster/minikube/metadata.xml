@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">kubernetes/minikube</remote-id>
+	</upstream>
+	<use>
+		<flag name="libvirt">Enable KVM2 driver support via libvirt (dynamically loaded at runtime)</flag>
+	</use>
+</pkgmetadata>

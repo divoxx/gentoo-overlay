@@ -1,4 +1,7 @@
 {
+  "sandbox": {
+    "excludedCommands": ["pkgdev", "pkgcheck"]
+  },
   "permissions": {
     "allow": [
       "Glob",
