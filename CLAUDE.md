@@ -40,6 +40,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Standards and Workflow
 
+For accumulated session learnings, see [BEST_PRACTICES.md](BEST_PRACTICES.md).
+
 Follow all engineering standards, tooling conventions, and the PR process documented in [CONTRIBUTING.md](CONTRIBUTING.md). It is the authoritative source for:
 
 - Development tooling and the standard ebuild workflow
