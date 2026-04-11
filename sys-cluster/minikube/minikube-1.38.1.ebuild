@@ -3,7 +3,7 @@
 
 EAPI=8
 
-inherit go-module bash-completion-r1 toolchain-funcs
+inherit go-module bash-completion-r1 shell-completion toolchain-funcs
 
 GIT_COMMIT="c93a4cb9311efc66b90d33ea03f75f2c4120e9b0"
 GIT_COMMIT_SHORT="${GIT_COMMIT:0:9}"
@@ -1010,14 +1010,6 @@ BDEPEND=">=dev-lang/go-1.25:="
 
 RESTRICT="test"
 
-src_unpack() {
-	default
-}
-
-src_prepare() {
-	default
-}
-
 src_configure() {
 	case "${ARCH}" in
 		amd64|arm*)
@@ -1058,8 +1050,7 @@ src_install() {
 		"${minikube_target}" completion zsh > "${T}/zshcomp" || die
 
 		newbashcomp "${T}/bashcomp" minikube
-		insinto /usr/share/fish/vendor_completions.d
-		newins "${T}/fishcomp" minikube.fish
+		newfishcomp "${T}/fishcomp" minikube.fish
 		insinto /usr/share/zsh/site-functions
 		newins "${T}/zshcomp" _minikube
 	fi
