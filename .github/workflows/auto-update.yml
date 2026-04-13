@@ -2,8 +2,8 @@ name: Auto-Update Ebuilds
 
 on:
   schedule:
-    - cron: '0 6 * * 0'   # Sunday 06:00 UTC (3h after image build at 03:00)
-    - cron: '0 6 * * 3'   # Wednesday 06:00 UTC
+    - cron: '20 6 * * 0'  # Sunday 06:20 UTC (3h after image build at 03:00)
+    - cron: '20 6 * * 3'  # Wednesday 06:20 UTC
   workflow_dispatch:        # allow manual trigger for testing
 
 permissions:
@@ -53,7 +53,7 @@ jobs:
 
       - name: Sync Portage tree
         run: |
-          emerge --sync -q || emerge --sync -q
+          emerge --sync -q || { sleep 60 && emerge --sync -q; }
           eselect news read all
 
       - name: Configure git
