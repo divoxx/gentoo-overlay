@@ -2,13 +2,9 @@ name: Verify Ebuilds
 
 on:
   push:
-    branches-ignore:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -30,7 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           NEWER=$(gh run list \
@@ -54,10 +50,16 @@ jobs:
       - name: Detect changed ebuilds
         id: detect
         if: steps.skip.outputs.should_skip != 'true'
+        env:
+          BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
 
-          MERGE_BASE=$(git merge-base HEAD origin/main)
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            MERGE_BASE="$BEFORE"
+          else
+            MERGE_BASE=$(git merge-base HEAD origin/main)
+          fi
           CHANGED=$(git diff --name-only "$MERGE_BASE" HEAD)
 
           EBUILD_CHANGES=$(echo "$CHANGED" | grep '\.ebuild$' || true)
@@ -97,14 +99,14 @@ jobs:
 
   promote:
     needs: verify
-    if: startsWith(github.head_ref || github.ref_name, 'auto-update/')
+    if: startsWith(github.ref_name, 'auto-update/')
     runs-on: ubuntu-latest
     steps:
       - name: Promote draft PR to ready
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
