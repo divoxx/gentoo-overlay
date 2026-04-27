@@ -123,12 +123,26 @@ jobs:
           # Build GitHub API tree entries for each staged file.
           # Commits created via the API are auto-signed by GitHub (shows as Verified).
           ENTRIES='[]'
-          while IFS=$'\t' read -r status file; do
+          while IFS=$'\t' read -r status file new_file; do
             if [[ "$status" == "D" ]]; then
               # Deleted file: null sha removes it from the tree
               ENTRIES=$(echo "$ENTRIES" | jq \
                 --arg path "$file" \
                 '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
+            elif [[ "$status" == R* ]]; then
+              # Renamed file: remove old path, add new path
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$file" \
+                '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
+              MODE=$(git ls-files --stage "$new_file" | awk '{print $1}')
+              TMPJSON=$(mktemp)
+              base64 -w0 < "$new_file" | jq -Rs '{"encoding":"base64","content":.}' > "$TMPJSON"
+              BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
+                --method POST --input "$TMPJSON" --jq '.sha')
+              rm -f "$TMPJSON"
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$new_file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
+                '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
             else
               MODE=$(git ls-files --stage "$file" | awk '{print $1}')
               # Use a temp file to avoid "Argument list too long" for large files
