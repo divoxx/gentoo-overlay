@@ -1,6 +1,7 @@
 ARG BASE_IMAGE=gentoo/stage3:amd64-systemd
 FROM ${BASE_IMAGE}
 
-RUN emerge --sync && \
+RUN echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf && \
+    emerge --sync && \
     emerge -uvDN --with-bdeps=y --quiet-build @world && \
     emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin app-misc/jq
