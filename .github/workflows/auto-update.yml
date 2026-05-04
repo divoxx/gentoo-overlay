@@ -189,7 +189,7 @@ jobs:
       - name: Open draft PR (skip if one already exists)
         if: steps.changes.outputs.updated == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.bot-token.outputs.token }}
           PACKAGE: ${{ matrix.package }}
           BRANCH: ${{ steps.push.outputs.branch }}
           REPO: ${{ github.repository }}
