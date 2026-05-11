@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">aome510/spotify-player</remote-id>
+	</upstream>
+	<use>
+		<flag name="daemon">Enable daemon mode support</flag>
+		<flag name="fzf">Enable fuzzy search support</flag>
+		<flag name="image">Enable image rendering support</flag>
+		<flag name="media-control">Enable cross-platform media control via MPRIS DBus</flag>
+		<flag name="notify">Enable desktop notification support</flag>
+		<flag name="pulseaudio">Use PulseAudio audio backend (ALSA is used otherwise)</flag>
+		<flag name="sixel">Enable sixel graphics support for image rendering</flag>
+		<flag name="streaming">Enable streaming songs directly from the terminal</flag>
+	</use>
+</pkgmetadata>
