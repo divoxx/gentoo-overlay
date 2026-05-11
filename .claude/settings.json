@@ -1,6 +1,6 @@
 {
   "sandbox": {
-    "excludedCommands": ["pkgdev", "pkgcheck", "gh"]
+    "excludedCommands": ["pkgdev", "pkgcheck", "gh", "ebuild"]
   },
   "permissions": {
     "allow": [
