@@ -134,7 +134,13 @@ if [[ ! -f "$OVERLAY_CONF" ]]; then
     echo "Registered overlay '$REPO_NAME' at $OVERLAY_ROOT"
 fi
 
-emerge --onlydeps --quiet-build "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
+# First pass: write any required USE-flag changes to package.use (non-fatal).
+emerge --onlydeps --autounmask=y --autounmask-write \
+    "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" 2>&1 || true
+
+# Second pass: install with the updated config in effect.
+emerge --onlydeps --quiet-build \
+    "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
     die "emerge --onlydeps failed — check DEPEND/BDEPEND declarations"
 
 echo "deps: OK"
