@@ -179,6 +179,15 @@ echo "Note: installs DEPEND/BDEPEND packages so pkg-config and headers are avail
 EBUILD_BASENAME=$(basename "$EBUILD_FILE" .ebuild)
 PV="${EBUILD_BASENAME#${NAME}-}"
 
+# Register the overlay with portage so emerge can resolve the package atom.
+OVERLAY_CONF="/etc/portage/repos.conf/${REPO_NAME}.conf"
+if [[ ! -f "$OVERLAY_CONF" ]]; then
+    mkdir -p /etc/portage/repos.conf
+    printf '[%s]\nlocation = %s\nmasters = gentoo\nauto-sync = no\n' \
+        "$REPO_NAME" "$OVERLAY_ROOT" > "$OVERLAY_CONF"
+    echo "Registered overlay '$REPO_NAME' at $OVERLAY_ROOT"
+fi
+
 emerge --onlydeps --quiet-build "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
     die "emerge --onlydeps failed — check DEPEND/BDEPEND declarations"
 
