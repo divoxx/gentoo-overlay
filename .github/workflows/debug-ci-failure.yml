@@ -129,8 +129,8 @@ jobs:
                 --repo "$REPO" \
                 -q '.[0].author.login // empty')
 
-              if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ]; then
-                echo "PR on $HEAD_BRANCH was not created by github-actions[bot] (got: ${PR_AUTHOR:-none}) — skipping"
+              if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ] && [ "${PR_AUTHOR:-}" != "divoxx-bot[bot]" ]; then
+                echo "PR on $HEAD_BRANCH was not created by a known bot (got: ${PR_AUTHOR:-none}) — skipping"
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
