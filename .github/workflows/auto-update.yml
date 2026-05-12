@@ -208,10 +208,23 @@ jobs:
             exit 0
           fi
 
-          BODY=$(printf '%s\n\n%s\n\n%s' \
-            "Automated upstream version bump for \`$PACKAGE\`." \
-            "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
-            "Generated with [Claude Code](https://claude.com/claude-code)")
+          CHANGELOG=""
+          if [ -f /tmp/pr-changelog.txt ]; then
+            CHANGELOG=$(cat /tmp/pr-changelog.txt)
+          fi
+
+          if [ -n "$CHANGELOG" ]; then
+            BODY=$(printf '%s\n\n## What changed\n\n%s\n\n%s\n\n%s' \
+              "Automated upstream version bump for \`$PACKAGE\`." \
+              "$CHANGELOG" \
+              "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
+              "Generated with [Claude Code](https://claude.com/claude-code)")
+          else
+            BODY=$(printf '%s\n\n%s\n\n%s' \
+              "Automated upstream version bump for \`$PACKAGE\`." \
+              "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
+              "Generated with [Claude Code](https://claude.com/claude-code)")
+          fi
 
           gh pr create \
             --draft \

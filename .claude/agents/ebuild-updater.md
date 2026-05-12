@@ -95,7 +95,18 @@ Run `pkgcheck scan <category>/<name>` and fix any issues reported. Common checks
 
 Run `ebuild <path-to-new-ebuild> clean fetch unpack prepare configure compile` to confirm the new version builds successfully without installing it. Fix any build failures before reporting completion.
 
-### 9. Report Results
+### 9. Write Changelog
+
+Fetch the release notes for the new version and write them to `/tmp/pr-changelog.txt`.
+
+- **GitHub**: Use the release body from `https://api.github.com/repos/{owner}/{repo}/releases/tags/v{version}` (also try without the `v` prefix if the first returns 404). Use the `body` field. If there is no GitHub release (only a tag), skip this step.
+- **PyPI / crates.io / other**: skip — no standard release notes format.
+
+Format the file as markdown. Include only the release notes for the new version being bumped — not the full history. If the release body is empty or contains only boilerplate, skip writing the file.
+
+Do not write the file if there are no useful release notes to include.
+
+### 10. Report Results
 
 Provide a summary:
 
