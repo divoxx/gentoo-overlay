@@ -119,11 +119,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ]; then
-            # For auto-update branches: guard against a human branch named auto-update/* by
-            # checking the PR was actually opened by a known bot. Skip manual dispatch — the
-            # human explicitly requested this run.
-            if [ "$MANUAL" != "true" ] && [[ "$HEAD_BRANCH" == auto-update/* ]]; then
+          if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ] && [[ "$HEAD_BRANCH" == auto-update/* ]]; then
+            # Auto-update branch: debugger fixes the ebuild in-place on the same branch.
+            # Guard against a human branch named auto-update/* — only process bot-created PRs.
+            if [ "$MANUAL" != "true" ]; then
               PR_AUTHOR=$(gh pr list \
                 --head "$HEAD_BRANCH" \
                 --state open \
@@ -149,7 +148,8 @@ jobs:
               echo "skip=false" >> "$GITHUB_OUTPUT"
             fi
           else
-            # For build-image / auto-update failures: skip if a ci-fix PR already exists today.
+            # For build-image, auto-update, and non-auto-update verify failures:
+            # skip if a ci-fix PR already exists today for the same workflow.
             SLUG=$(echo "$WORKFLOW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
             DATE=$(date +%Y-%m-%d)
             BRANCH="ci-fix/${SLUG}-${DATE}"
