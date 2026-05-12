@@ -31,17 +31,11 @@ permissions:
 
 jobs:
   debug:
-    # workflow_run: only fire for failures, and gate Verify Ebuilds to auto-update/** branches.
+    # workflow_run: only fire for failures.
     # workflow_dispatch: always run — the human explicitly requested it.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'failure' &&
-        (
-          github.event.workflow_run.name != 'Verify Ebuilds' ||
-          startsWith(github.event.workflow_run.head_branch, 'auto-update/')
-        )
-      )
+      github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
 
     steps:
@@ -126,10 +120,10 @@ jobs:
           set -euo pipefail
 
           if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ]; then
-            # For manual dispatch, skip the PR-author check — the human explicitly requested this run.
-            if [ "$MANUAL" != "true" ]; then
-              # Only self-heal PRs that were actually opened by the auto-update bot.
-              # This guards against a human branch named auto-update/* triggering the debugger.
+            # For auto-update branches: guard against a human branch named auto-update/* by
+            # checking the PR was actually opened by a known bot. Skip manual dispatch — the
+            # human explicitly requested this run.
+            if [ "$MANUAL" != "true" ] && [[ "$HEAD_BRANCH" == auto-update/* ]]; then
               PR_AUTHOR=$(gh pr list \
                 --head "$HEAD_BRANCH" \
                 --state open \
