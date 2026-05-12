@@ -138,6 +138,10 @@ fi
 emerge --onlydeps --autounmask=y --autounmask-write \
     "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" 2>&1 || true
 
+# Accept any written config changes. --autounmask-write creates ._cfg000X_ files
+# under CONFIG_PROTECT which are not active until dispatched.
+etc-update --automode -5 2>/dev/null || true
+
 # Second pass: install with the updated config in effect.
 emerge --onlydeps --quiet-build \
     "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
