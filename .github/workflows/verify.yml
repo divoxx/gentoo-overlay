@@ -106,9 +106,16 @@ jobs:
     if: startsWith(github.head_ref || github.ref_name, 'auto-update/')
     runs-on: ubuntu-latest
     steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.BOT_APP_ID }}
+          private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
       - name: Promote draft PR to ready
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.bot-token.outputs.token }}
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |

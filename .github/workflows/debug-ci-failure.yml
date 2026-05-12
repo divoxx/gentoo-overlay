@@ -31,24 +31,25 @@ permissions:
 
 jobs:
   debug:
-    # workflow_run: only fire for failures, and gate Verify Ebuilds to auto-update/** branches.
+    # workflow_run: only fire for failures.
     # workflow_dispatch: always run — the human explicitly requested it.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'failure' &&
-        (
-          github.event.workflow_run.name != 'Verify Ebuilds' ||
-          startsWith(github.event.workflow_run.head_branch, 'auto-update/')
-        )
-      )
+      github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
 
     steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.BOT_APP_ID }}
+          private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.bot-token.outputs.token }}
 
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
@@ -56,13 +57,14 @@ jobs:
       - name: Configure git
         env:
           REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
+          BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+          git config --global user.name "divoxx-bot[bot]"
+          git config --global user.email "${BOT_APP_ID}+divoxx-bot[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${REPO}.git"
 
       - name: Resolve context
         id: ctx
@@ -117,11 +119,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ]; then
-            # For manual dispatch, skip the PR-author check — the human explicitly requested this run.
+          if [ "$WORKFLOW_NAME" = "Verify Ebuilds" ] && [[ "$HEAD_BRANCH" == auto-update/* ]]; then
+            # Auto-update branch: debugger fixes the ebuild in-place on the same branch.
+            # Guard against a human branch named auto-update/* — only process bot-created PRs.
             if [ "$MANUAL" != "true" ]; then
-              # Only self-heal PRs that were actually opened by the auto-update bot.
-              # This guards against a human branch named auto-update/* triggering the debugger.
               PR_AUTHOR=$(gh pr list \
                 --head "$HEAD_BRANCH" \
                 --state open \
@@ -129,8 +130,8 @@ jobs:
                 --repo "$REPO" \
                 -q '.[0].author.login // empty')
 
-              if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ]; then
-                echo "PR on $HEAD_BRANCH was not created by github-actions[bot] (got: ${PR_AUTHOR:-none}) — skipping"
+              if [ "${PR_AUTHOR:-}" != "github-actions[bot]" ] && [ "${PR_AUTHOR:-}" != "divoxx-bot[bot]" ]; then
+                echo "PR on $HEAD_BRANCH was not created by a known bot (got: ${PR_AUTHOR:-none}) — skipping"
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
@@ -147,7 +148,8 @@ jobs:
               echo "skip=false" >> "$GITHUB_OUTPUT"
             fi
           else
-            # For build-image / auto-update failures: skip if a ci-fix PR already exists today.
+            # For build-image, auto-update, and non-auto-update verify failures:
+            # skip if a ci-fix PR already exists today for the same workflow.
             SLUG=$(echo "$WORKFLOW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
             DATE=$(date +%Y-%m-%d)
             BRANCH="ci-fix/${SLUG}-${DATE}"

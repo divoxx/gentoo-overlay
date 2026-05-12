@@ -50,7 +50,8 @@ if [[ -z "$OVERLAY_ROOT" ]]; then
 fi
 [[ -n "$OVERLAY_ROOT" ]] || die "Could not locate overlay root"
 
-echo "Overlay: $OVERLAY_ROOT ($(cat "$OVERLAY_ROOT/profiles/repo_name"))"
+REPO_NAME=$(cat "$OVERLAY_ROOT/profiles/repo_name")
+echo "Overlay: $OVERLAY_ROOT ($REPO_NAME)"
 
 # ---------------------------------------------------------------------------
 # Locate ebuild
@@ -72,19 +73,19 @@ fi
 echo "Ebuild: $EBUILD_FILE"
 
 # ---------------------------------------------------------------------------
-# 1/4: Manifest
+# 1/5: Manifest
 # ---------------------------------------------------------------------------
 
-step "1/4: Regenerating Manifest (pkgdev manifest)"
+step "1/5: Regenerating Manifest (pkgdev manifest)"
 
 (cd "$PKG_DIR" && pkgdev manifest)
 echo "Manifest: OK"
 
 # ---------------------------------------------------------------------------
-# 2/4: pkgcheck QA scan
+# 2/5: pkgcheck QA scan
 # ---------------------------------------------------------------------------
 
-step "2/4: pkgcheck QA scan"
+step "2/5: pkgcheck QA scan"
 
 # Run from overlay root so pkgcheck resolves the repo correctly.
 # Any finding (warning or error) is treated as a failure.
@@ -95,10 +96,10 @@ PKGCHECK_EXIT=0
 echo "pkgcheck: OK (no issues)"
 
 # ---------------------------------------------------------------------------
-# 3/4: Fetch
+# 3/5: Fetch
 # ---------------------------------------------------------------------------
 
-step "3/4: Fetching distfiles (ebuild clean fetch)"
+step "3/5: Fetching distfiles (ebuild clean fetch)"
 
 FETCH_LOG=$(mktemp /tmp/verify-fetch-XXXXXX.log)
 FETCH_EXIT=0
@@ -115,10 +116,44 @@ rm -f "$FETCH_LOG"
 echo "fetch: OK"
 
 # ---------------------------------------------------------------------------
-# 4/4: Build through install phase
+# 4/5: Install declared build dependencies
 # ---------------------------------------------------------------------------
 
-step "4/4: Building through install phase (unpack prepare configure compile install)"
+step "4/5: Installing build dependencies (emerge --onlydeps)"
+echo "Note: installs DEPEND/BDEPEND packages so pkg-config and headers are available."
+
+EBUILD_BASENAME=$(basename "$EBUILD_FILE" .ebuild)
+PV="${EBUILD_BASENAME#${NAME}-}"
+
+# Register the overlay with portage so emerge can resolve the package atom.
+OVERLAY_CONF="/etc/portage/repos.conf/${REPO_NAME}.conf"
+if [[ ! -f "$OVERLAY_CONF" ]]; then
+    mkdir -p /etc/portage/repos.conf
+    printf '[%s]\nlocation = %s\nmasters = gentoo\nauto-sync = no\n' \
+        "$REPO_NAME" "$OVERLAY_ROOT" > "$OVERLAY_CONF"
+    echo "Registered overlay '$REPO_NAME' at $OVERLAY_ROOT"
+fi
+
+# First pass: write any required USE-flag changes to package.use (non-fatal).
+emerge --onlydeps --autounmask=y --autounmask-write \
+    "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" 2>&1 || true
+
+# Accept any written config changes. --autounmask-write creates ._cfg000X_ files
+# under CONFIG_PROTECT which are not active until dispatched.
+etc-update --automode -5 2>/dev/null || true
+
+# Second pass: install with the updated config in effect.
+emerge --onlydeps --quiet-build \
+    "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
+    die "emerge --onlydeps failed — check DEPEND/BDEPEND declarations"
+
+echo "deps: OK"
+
+# ---------------------------------------------------------------------------
+# 5/5: Build through install phase
+# ---------------------------------------------------------------------------
+
+step "5/5: Building through install phase (unpack prepare configure compile install)"
 echo "Note: 'install' writes to staging \${D} only — live filesystem is never touched."
 
 ebuild "$EBUILD_FILE" unpack prepare configure compile install || \
