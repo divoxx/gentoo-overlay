@@ -279,4 +279,5 @@ COMMENT_BODY="$COMMENT_BODY" bash scripts/ci/comment-triggering-pr.sh || \
   ```
   The job will fail visibly and the diagnosis will appear in the Actions log.
 - For verify failures: push to the existing auto-update branch, never create a new PR.
+- **Never** push empty commits to re-trigger CI. Use `gh workflow run <workflow-file> --ref <branch> --repo "$REPO"` instead.
 - If in doubt between fixable and transient, choose transient.
