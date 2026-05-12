@@ -1,4 +1,4 @@
-# divoxx-overlay
+# Gentoo Overlay
 
 A personal Gentoo package overlay by [Rodrigo Kochenburger](https://github.com/divoxx) containing packages not available in the [official Gentoo tree](https://packages.gentoo.org/) or the [GURU overlay](https://gpo.zugaina.org/overlays/guru).
 
