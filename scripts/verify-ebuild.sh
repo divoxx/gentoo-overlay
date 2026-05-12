@@ -63,11 +63,41 @@ echo "Overlay: $OVERLAY_ROOT ($REPO_NAME)"
 # default `gentoo` repo, so write a repos.conf entry for this overlay before
 # any emerge invocation. Skipped silently on hosts without /etc/portage
 # (e.g. non-Gentoo dev machines running pkgcheck-only checks).
+#
+# IMPORTANT: in the stage3-based CI image, /etc/portage/repos.conf does not
+# exist as a directory by default — the gentoo repo is defined by the system
+# default at /usr/share/portage/config/repos.conf. Creating
+# /etc/portage/repos.conf as a directory (via `mkdir -p`) shadows that system
+# default, so portage and pkgdev lose the `gentoo` repo definition and fail
+# with: "repos.conf: default repo 'gentoo' is undefined or invalid".
+#
+# To preserve the default, also write a gentoo.conf alongside the overlay
+# conf whenever we materialise /etc/portage/repos.conf as a directory.
 
 if [[ -d /etc/portage ]]; then
     step "Registering overlay $REPO_NAME with portage"
     REPOS_CONF_DIR=/etc/portage/repos.conf
+    NEED_GENTOO_CONF=0
+    # If repos.conf is not yet a directory, creating it will shadow the
+    # /usr/share/portage/config/repos.conf default — we must materialise a
+    # gentoo.conf ourselves to keep the default repo defined.
+    [[ ! -d "$REPOS_CONF_DIR" ]] && NEED_GENTOO_CONF=1
     mkdir -p "$REPOS_CONF_DIR"
+
+    if [[ $NEED_GENTOO_CONF -eq 1 && ! -f "$REPOS_CONF_DIR/gentoo.conf" ]]; then
+        cat > "$REPOS_CONF_DIR/gentoo.conf" <<'EOF'
+[DEFAULT]
+main-repo = gentoo
+
+[gentoo]
+location = /var/db/repos/gentoo
+sync-type = rsync
+sync-uri = rsync://rsync.gentoo.org/gentoo-portage
+auto-sync = no
+EOF
+        echo "Wrote $REPOS_CONF_DIR/gentoo.conf (preserves system default repo)"
+    fi
+
     REPOS_CONF_FILE="$REPOS_CONF_DIR/${REPO_NAME}.conf"
     cat > "$REPOS_CONF_FILE" <<EOF
 [${REPO_NAME}]
