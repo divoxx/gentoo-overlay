@@ -9,7 +9,7 @@ drop_reason: ~
 
 ## Summary
 
-Add a GLEP 42 portage news system to `divoxx-overlay` so users syncing the overlay see operator-readable notices for breaking changes and updates that require manual care. News items live under `metadata/news/<YYYY-MM-DD>-<slug>/` and are delivered to users automatically by Portage after `emaint sync -r divoxx-overlay`. News creation is human-authored, not bot-authored: the `ebuild-updater` agent flags candidate updates as newsworthy in the auto-update PR, and a separate `/news-add` skill lets the maintainer write the item by hand. News items are committed unsigned (Portage does not enforce GLEP 42 signing for third-party overlays). A lightweight pkgcheck-style linter (`scripts/news-lint.sh`) runs in CI to catch malformed news items before merge.
+Add a GLEP 42 portage news system to `divoxx-overlay` so users syncing the overlay see operator-readable notices for breaking changes and updates that require manual care. News items live under `metadata/news/<YYYY-MM-DD>-<slug>/` and are delivered to users automatically by Portage after `emaint sync -r divoxx-overlay`. News creation is human-authored, not bot-authored. The `/ebuild-create`, `/ebuild-update`, and `/ebuild-remove` skills each apply the newsworthiness rubric and prompt the maintainer inline, before the PR is opened. For automated runs via `auto-update.yml`, the `ebuild-updater` agent includes a newsworthiness assessment directly in the PR description as a visible hint for the maintainer. News items are committed unsigned (Portage does not enforce GLEP 42 signing for third-party overlays). A lightweight pkgcheck-style linter (`scripts/news-lint.sh`) runs in CI to catch malformed news items before merge.
 
 ## Should we do this?
 
@@ -69,9 +69,13 @@ Three distinct design questions, each with a recommendation. The space of "do no
 
 ### Question 1 — Who authors the news item?
 
-**Recommendation: maintainer authors; the bot only flags.**
+**Recommendation: maintainer authors; the skills and agent only flag.**
 
-The `ebuild-updater` agent identifies newsworthiness during auto-update and writes a hint into the PR description. The maintainer writes the actual news item by hand (or with `/news-add`) before merging the PR.
+Two flows exist and are treated differently:
+
+**Manual flows** (`/ebuild-create`, `/ebuild-update`, `/ebuild-remove`): the skill applies the newsworthiness rubric against the release notes or removal rationale, presents a verdict to the maintainer, and — if newsworthy or uncertain — offers to run `/news-add` inline before opening the PR. The news item is authored and committed in the same PR as the ebuild change.
+
+**Automated flow** (`auto-update.yml` + `ebuild-updater` agent): the agent cannot interactively prompt. Instead it classifies newsworthiness and embeds the verdict and rationale directly in the PR description as a clearly marked block. The maintainer reads it before merging and decides whether to add a news item. No temp files or workflow wiring are involved — the agent writes the assessment as prose in the PR body using its existing PR-creation step.
 
 Rationale: newsworthiness is a judgement call about user impact, not a mechanical property of a version bump. Examples that look the same at the version level but differ at the user level:
 
@@ -79,9 +83,7 @@ Rationale: newsworthiness is a judgement call about user impact, not a mechanica
 - `worktrunk` 0.43.0 → 0.43.1: patch bump, no behavioural change. Not newsworthy.
 - `worktrunk` 0.43.1 → 0.49.0: large version jump but every intermediate release was internal refactoring. Probably not newsworthy.
 
-Letting the bot author the item invites two failure modes: (a) noise — news for every breaking-looking but actually-fine release, training users to ignore news; (b) silent miss — bot doesn't notice a change that the release notes failed to highlight. A human-in-the-loop approach catches both. The bot's job is to surface candidates loudly in the PR body so the maintainer doesn't miss them.
-
-Door stays open: if the agent's classification proves reliable over time, we can promote it from "flag in PR" to "draft a news item in the PR" without changing file layout. The decision is reversible.
+Door stays open: if the agent's classification proves reliable over time, we can promote it from "flag in PR description" to "draft a news item in the PR" without changing file layout.
 
 ### Question 2 — Signing strategy
 
@@ -129,11 +131,13 @@ Mere "new features" or "performance improvement" are not newsworthy by themselve
 | Create | `scripts/news-lint.sh` | Validate every news item under `metadata/news/` for GLEP 42 conformance and overlay rules |
 | Create | `scripts/news-new.sh` | Scaffold a new news item directory + `.txt` from arguments |
 | Create | `.claude/skills/news-add/SKILL.md` | Skill entrypoint: `/news-add <category/name> [slug]` that runs the scaffolder, opens the file for editing, and prompts the user for the body |
-| Create | `.github/workflows/news-lint.yml` | CI workflow that runs `scripts/news-lint.sh` on every PR that touches `metadata/news/` and on every push to `main` |
+| Create | `.github/workflows/news-lint.yml` | CI workflow that runs `scripts/news-lint.sh` on every PR and fails on malformed news items. Never writes news items. |
 | Modify | `CONTRIBUTING.md` | Add a "News Items" section: when to write one, the rubric, how to file one (the skill), the unsigned-overlay note |
 | Modify | `CLAUDE.md` | Add `/news-add` to the Agent Delegation table |
-| Modify | `.claude/agents/ebuild-updater.md` | Add step "10 Classify newsworthiness" between Write Changelog and Report Results; write the verdict and rationale into `/tmp/pr-newsworthy.txt` |
-| Modify | `.github/workflows/auto-update.yml` | After the agent runs, read `/tmp/pr-newsworthy.txt` if present and prepend a "News review needed" header to the PR body |
+| Modify | `.claude/agents/ebuild-updater.md` | Add newsworthiness classification step; write the verdict as a clearly marked prose block in the PR description (not a temp file for workflow wiring) |
+| Modify | `.claude/skills/ebuild-create/SKILL.md` | After creating files, apply newsworthiness rubric (new package: typically not newsworthy, but note if a removed package in the overlay has the same atom); if uncertain, prompt and optionally run `/news-add` |
+| Modify | `.claude/skills/ebuild-update/SKILL.md` | After bumping, apply newsworthiness rubric to the release notes; if newsworthy or uncertain, prompt and optionally run `/news-add` inline before opening the PR |
+| Modify | `.claude/skills/ebuild-remove/SKILL.md` | Before opening the PR, always prompt about a news item for the removed package (see RFC auto-update-readme for the `/ebuild-remove` skill definition) |
 
 No existing ebuilds, manifests, or `metadata/layout.conf` are touched. `metadata/news/` is a peer of `metadata/md5-cache/` and `metadata/layout.conf` — no `layout.conf` change is required for Portage to find news items; it discovers them by convention. `verify.yml` is not modified — the new `news-lint.yml` is an independent workflow with its own `paths` filter; branch protection adding it as a required check is a one-time UI configuration outside the scope of this RFC's code changes.
 
@@ -565,35 +569,16 @@ jobs:
 
 Branch-protection follow-up (documentation only — outside this RFC's code changes): after the workflow lands and produces at least one successful run on `main`, add `news-lint / news-lint` to the required-status-checks list for `main` via repository Settings → Branches → Branch protection rules. This is a one-time UI configuration.
 
-#### Step 5 — Update the ebuild-updater agent to flag newsworthiness
+#### Step 5 — Update the ebuild-updater agent to include newsworthiness in the PR description
 
 File: `.claude/agents/ebuild-updater.md`.
 
-Insert a new step 10 between the existing step 9 ("Write Changelog") and the previously-numbered step 10 ("Report Results"), and renumber the existing "Report Results" step from 10 to 11. Insert at the position immediately after the existing `### 9. Write Changelog` subsection ends and before `### 10. Report Results` (which becomes `### 11. Report Results`) begins. The exact insertion follows — note the use of `~~~` fences in the inserted prose to avoid clashing with the outer ` ``` ` fence in this RFC:
+Insert a new step 10 between the existing step 9 ("Write Changelog") and the previously-numbered step 10 ("Report Results"), renumbering "Report Results" to 11. The agent writes its verdict directly as a prose block in the PR description — no temp file, no workflow wiring. The exact insertion:
 
 ```markdown
 ### 10. Classify Newsworthiness
 
 After writing the changelog (or determining there is none), classify whether this update is **newsworthy** per `CONTRIBUTING.md` → "News Items" → "When to write a news item".
-
-Write the classification to `/tmp/pr-newsworthy.txt` as exactly one of:
-
-~~~
-NEWSWORTHY
-<one-paragraph rationale: which rule(s) the update triggers, and what user action is required>
-~~~
-
-~~~
-NOT_NEWSWORTHY
-<one-line rationale, e.g. "patch bump, internal refactor only">
-~~~
-
-~~~
-UNKNOWN
-release notes unavailable — maintainer should inspect upstream and decide
-~~~
-
-The first line of the file MUST be exactly `NEWSWORTHY`, `NOT_NEWSWORTHY`, or `UNKNOWN`. Subsequent lines are free-form rationale. The auto-update workflow reads only the first line for branching and pipes the rest into the PR body verbatim.
 
 **Rules for choosing NEWSWORTHY:**
 
@@ -604,79 +589,35 @@ The first line of the file MUST be exactly `NEWSWORTHY`, `NOT_NEWSWORTHY`, or `U
 5. **Security-relevant default change.**
 6. **Cross-package implication.**
 
-Be conservative — when in doubt, mark `NEWSWORTHY` and let the human decide. Do **not** write the news item yourself — the maintainer authors it with `/news-add`.
+Be conservative — when in doubt, flag as potentially newsworthy. Do **not** write the news item yourself — the maintainer authors it with `/news-add` before merging.
 
-Do not skip writing the file. The auto-update workflow reads it and adjusts the PR body accordingly. If the file is absent, the workflow defaults to no newsworthy block.
+Include the verdict in the PR description (written in the Report Results step) as a clearly marked block immediately after the changelog section. Use this format:
+
+- If **NEWSWORTHY**: add a `> [!IMPORTANT]` block stating which rule applies, what user action is required, and suggesting `/news-add <category/name> <slug>`.
+- If **NOT_NEWSWORTHY**: add a one-line note `> **News item:** Not required — <brief rationale>.`
+- If **UNKNOWN** (release notes unavailable): add a `> [!NOTE]` block stating that newsworthiness could not be determined and the maintainer should inspect upstream.
 ```
 
-12. Commit message: `feat(ebuild-updater): classify newsworthiness of upstream bumps`.
+12. Commit message: `feat(ebuild-updater): classify newsworthiness in PR description`.
 
-#### Step 6 — Wire the auto-update workflow to surface the newsworthy hint
+#### Step 6 — Integrate newsworthiness prompting into `/ebuild-create`, `/ebuild-update`, and `/ebuild-remove`
 
-File: `.github/workflows/auto-update.yml`.
+This step modifies the three skill files. The goal is that whenever a skill opens a PR, it has already applied the rubric and either included a news item in the PR or confirmed with the maintainer that none is needed.
 
-Modify the "Open draft PR" step so it reads `/tmp/pr-newsworthy.txt` and prepends a "News review needed" block to the PR body when the classification is `NEWSWORTHY` or `UNKNOWN`. The full replacement block — substituting the existing body-construction logic from `CHANGELOG=""` through the `gh pr create` invocation — is:
+**`/ebuild-create` (`.claude/skills/ebuild-create/SKILL.md`):** New packages have no existing users, so a news item is almost never needed. Add a step after verifying the ebuild builds:
 
-```bash
-          CHANGELOG=""
-          if [ -f /tmp/pr-changelog.txt ]; then
-            CHANGELOG=$(cat /tmp/pr-changelog.txt)
-          fi
+> Check whether an existing package in the overlay shares this atom (renamed category, previously removed and re-added). If so, apply the newsworthiness rubric and prompt as in `/ebuild-update`. Otherwise, skip news item creation.
 
-          NEWSWORTHY_BLOCK=""
-          if [ -f /tmp/pr-newsworthy.txt ]; then
-            VERDICT=$(head -1 /tmp/pr-newsworthy.txt)
-            RATIONALE=$(tail -n +2 /tmp/pr-newsworthy.txt)
-            # Guard against an agent that wrote only the verdict line with no
-            # rationale — an empty RATIONALE would render as a single "> " in
-            # the alert block below, producing a malformed quote.
-            if [ -z "$RATIONALE" ]; then
-              RATIONALE="(no additional rationale)"
-            fi
-            case "$VERDICT" in
-              NEWSWORTHY)
-                QUOTED_RATIONALE=$(echo "$RATIONALE" | sed 's/^/> /')
-                NEWSWORTHY_BLOCK=$(printf '> [!IMPORTANT]\n> **News item review needed.** The ebuild-updater agent flagged this bump as potentially newsworthy:\n>\n%s\n>\n> Before merging, decide whether to add a news item using `/news-add %s <slug>` (or skip if the agent over-flagged).' \
-                  "$QUOTED_RATIONALE" "$PACKAGE")
-                ;;
-              UNKNOWN)
-                NEWSWORTHY_BLOCK=$(printf '> [!NOTE]\n> The ebuild-updater agent could not classify newsworthiness for this bump (no release notes). Maintainer should inspect upstream and decide whether a news item is needed.')
-                ;;
-              NOT_NEWSWORTHY|*)
-                NEWSWORTHY_BLOCK=""
-                ;;
-            esac
-          fi
+**`/ebuild-update` (`.claude/skills/ebuild-update/SKILL.md`):** Add a step after bumping the ebuild, before opening the PR:
 
-          # Compose body: newsworthy block first, then header, then optional changelog, then footer.
-          BODY_HEADER="Automated upstream version bump for \`$PACKAGE\`."
-          BODY_FOOTER=$(printf '%s\n\n%s' \
-            "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
-            "Generated with [Claude Code](https://claude.com/claude-code)")
+> Apply the newsworthiness rubric from `CONTRIBUTING.md` → "News Items" to the release notes fetched for the changelog. Present the verdict to the maintainer:
+> - **NOT_NEWSWORTHY:** state this and proceed to open the PR.
+> - **NEWSWORTHY:** explain which rule applies and what user action is needed. Ask: "A news item is recommended. Create one now with `/news-add`? (y/n)". If yes, run `/news-add <category/name>` inline; include the resulting file in the PR. If no, proceed and note in the PR description that the maintainer chose to skip the news item.
+> - **UNKNOWN** (no release notes): prompt: "Release notes were not available. Should a news item be created? (y/n/skip)".
 
-          if [ -n "$NEWSWORTHY_BLOCK" ] && [ -n "$CHANGELOG" ]; then
-            BODY=$(printf '%s\n\n%s\n\n## What changed\n\n%s\n\n%s' \
-              "$NEWSWORTHY_BLOCK" "$BODY_HEADER" "$CHANGELOG" "$BODY_FOOTER")
-          elif [ -n "$NEWSWORTHY_BLOCK" ]; then
-            BODY=$(printf '%s\n\n%s\n\n%s' "$NEWSWORTHY_BLOCK" "$BODY_HEADER" "$BODY_FOOTER")
-          elif [ -n "$CHANGELOG" ]; then
-            BODY=$(printf '%s\n\n## What changed\n\n%s\n\n%s' "$BODY_HEADER" "$CHANGELOG" "$BODY_FOOTER")
-          else
-            BODY=$(printf '%s\n\n%s' "$BODY_HEADER" "$BODY_FOOTER")
-          fi
+**`/ebuild-remove` (`.claude/skills/ebuild-remove/SKILL.md`):** Already specified in RFC `auto-update-readme-on-package-changes` Step 5. Confirmed here: removal always prompts for a news item.
 
-          gh pr create \
-            --draft \
-            --title "auto-update: $PACKAGE" \
-            --body "$BODY" \
-            --base main \
-            --head "$BRANCH" \
-            --repo "$REPO"
-```
-
-13. The four-arm `if/elif/elif/else` handles every combination of (newsworthy block present, changelog present). No other change to `auto-update.yml`.
-14. The `case` arm `NOT_NEWSWORTHY|*` is intentional: the `|*` catch-all ensures any unexpected verdict (or empty file) collapses to "no block." Pre-existing PRs continue to render the same way they did before this change when `/tmp/pr-newsworthy.txt` is absent.
-15. Commit message: `ci: surface newsworthiness classification in auto-update PR body`.
+13. Commit message for each skill file: `feat(<skill>): prompt for news item when warranted`.
 
 #### Step 7 — `/news-add` skill
 
@@ -725,7 +666,7 @@ Scaffold and edit a GLEP 42 portage news item for divoxx-overlay.
 - Do **not** edit `scripts/news-new.sh` or `scripts/news-lint.sh` from inside this skill.
 ~~~
 
-16. Commit message: `feat: add /news-add skill for authoring news items`.
+14. Commit message: `feat: add /news-add skill for authoring news items`.
 
 #### Step 8 — Update CLAUDE.md delegation table
 
@@ -737,17 +678,17 @@ Modify the Agent Delegation table at the end of the file. Add one row to the exi
 | Author a portage news item | (none — direct skill) | `/news-add <category/name> [slug]` |
 ```
 
-17. Commit message: `docs: add /news-add to agent delegation table`.
+15. Commit message: `docs: add /news-add to agent delegation table`.
 
 ### Step ordering
 
-Steps 1–4 are foundation (directory, scaffolder, linter, CI). Steps 5–8 are the human-in-the-loop integration (agent flagging, auto-update PR enhancement, skill, doc). Recommended PR plan:
+Steps 1–4 are foundation (directory, scaffolder, linter, CI). Steps 5–8 are the human-in-the-loop integration (agent classification in PR description, skill prompting, news-add skill, doc). Recommended PR plan:
 
 - **PR 1**: Steps 1 + 2 + 3 + 4 (foundation: directory, scaffolder, linter, CI workflow).
-- **PR 2**: Steps 5 + 6 (agent flagging + auto-update wire-up).
-- **PR 3**: Steps 7 + 8 (skill + doc).
+- **PR 2**: Steps 5 + 6 (ebuild-updater classification + skill integration).
+- **PR 3**: Steps 7 + 8 (news-add skill + CLAUDE.md doc).
 
-Each PR is independently revertible. After PR 1 lands, the maintainer can already author news items by hand. PRs 2 and 3 add convenience.
+Each PR is independently revertible. After PR 1 lands, the maintainer can already author news items by hand. PRs 2 and 3 add the inline prompting and skill automation.
 
 ### Acceptance criteria
 
@@ -758,7 +699,7 @@ The implementation is complete when:
 3. `bash scripts/news-lint.sh` exits 1 with at least one `FAIL` line when run against an un-edited scaffold (proves placeholders are rejected).
 4. `bash scripts/news-lint.sh` exits 0 when run against a fully-filled-in news item with valid headers and a real overlay package in `Display-If-Installed`.
 5. The `News Lint` workflow runs on a PR that adds a file under `metadata/news/**` and blocks merge if the linter fails.
-6. A manual run of `auto-update.yml` (via `workflow_dispatch`) on a package produces a draft PR whose body contains either a `> [!IMPORTANT]` newsworthy block, a `> [!NOTE]` unknown block, or no news block — depending on the verdict the agent writes to `/tmp/pr-newsworthy.txt`.
+6. A manual run of `auto-update.yml` (via `workflow_dispatch`) on a package produces a draft PR whose body contains either a `> [!IMPORTANT]` newsworthy block, a `> [!NOTE]` unknown block, or a one-line "not required" note — written directly by the `ebuild-updater` agent as prose in the PR description, with no temp file or workflow wiring involved.
 7. `/news-add app-containers/devpod some-slug` scaffolds, prompts for content, writes the file, runs the linter, and exits cleanly with a green report in Claude Code.
 
 ## Risks and open questions
