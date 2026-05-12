@@ -54,6 +54,30 @@ REPO_NAME=$(cat "$OVERLAY_ROOT/profiles/repo_name")
 echo "Overlay: $OVERLAY_ROOT ($REPO_NAME)"
 
 # ---------------------------------------------------------------------------
+# Register overlay with portage
+# ---------------------------------------------------------------------------
+#
+# `ebuild` operates on a file path and `pkgcheck` auto-detects the repo from
+# profiles/repo_name, but `emerge` (used in step 4/5) requires the overlay to
+# be declared in /etc/portage/repos.conf. The CI container ships only the
+# default `gentoo` repo, so write a repos.conf entry for this overlay before
+# any emerge invocation. Skipped silently on hosts without /etc/portage
+# (e.g. non-Gentoo dev machines running pkgcheck-only checks).
+
+if [[ -d /etc/portage ]]; then
+    step "Registering overlay $REPO_NAME with portage"
+    REPOS_CONF_DIR=/etc/portage/repos.conf
+    mkdir -p "$REPOS_CONF_DIR"
+    REPOS_CONF_FILE="$REPOS_CONF_DIR/${REPO_NAME}.conf"
+    cat > "$REPOS_CONF_FILE" <<EOF
+[${REPO_NAME}]
+location = ${OVERLAY_ROOT}
+auto-sync = no
+EOF
+    echo "Wrote $REPOS_CONF_FILE"
+fi
+
+# ---------------------------------------------------------------------------
 # Locate ebuild
 # ---------------------------------------------------------------------------
 
