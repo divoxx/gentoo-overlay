@@ -811,7 +811,7 @@ RDEPEND="
 	dev-libs/openssl:=
 	media-libs/alsa-lib
 	media-control? ( sys-apps/dbus:= )
-	notify? ( x11-libs/libnotify )
+	notify? ( sys-apps/dbus:= )
 	pulseaudio? ( media-libs/libpulse )
 	sixel? ( media-libs/libsixel:= )
 "
