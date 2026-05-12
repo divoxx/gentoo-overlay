@@ -809,7 +809,7 @@ REQUIRED_USE="
 
 RDEPEND="
 	dev-libs/openssl:=
-	streaming? ( media-libs/alsa-lib )
+	media-libs/alsa-lib
 	media-control? ( sys-apps/dbus:= )
 	notify? ( x11-libs/libnotify )
 	pulseaudio? ( media-libs/libpulse )
