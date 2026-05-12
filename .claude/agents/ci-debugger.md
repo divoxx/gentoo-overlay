@@ -142,6 +142,7 @@ For transient failures: go to **Step 4 (Transient Path)**.
 | `emerge` package-not-found, USE flag conflict, or slot conflict | Fix `.github/Containerfile.ci` |
 | CLI tool missing from image (`gh`, `claude`, `pkgcheck`, `pkgdev`) | Fix `.github/Containerfile.ci` |
 | Workflow YAML syntax error or invalid field | Fix `.github/workflows/<name>.yml` |
+| `pkg-config exited with status code 1` / `system library … was not found` during `src_compile` | Fix `scripts/verify-ebuild.sh` (missing `--onlydeps` step) |
 
 For fixable failures: go to **Step 3 (Fix Path)**.
 
@@ -151,7 +152,21 @@ If you cannot confidently classify, treat as **transient** and note the ambiguit
 
 ---
 
-## Step 3: Fix Path — New Branch + PR
+## Step 3: Fix Path — Tracking Issue + Fix PR
+
+### 3a. Open a tracking issue first
+
+Set the body, then call `scripts/ci/create-tracking-issue.sh`:
+
+```bash
+ISSUE_TITLE="CI fixable failure: $WORKFLOW_NAME ($(date +%Y-%m-%d))"
+ISSUE_BODY="$(printf '## Failure Summary\n\nWorkflow **'"$WORKFLOW_NAME"'** (run [#'"$RUN_ID"']('"$RUN_URL"')) failed with a fixable infrastructure issue.\n\n## Root Cause\n\n<classification and the key log lines that support it>\n\n## Fix\n\n<what file will be changed and why it prevents recurrence>\n\nGenerated with [Claude Code](https://claude.com/claude-code)')"
+
+ISSUE_URL=$(ISSUE_TITLE="$ISSUE_TITLE" ISSUE_BODY="$ISSUE_BODY" bash scripts/ci/create-tracking-issue.sh)
+ISSUE_NUMBER="${ISSUE_URL##*/}"
+```
+
+### 3b. Create the fix branch and make the code change
 
 Use the exact fix branch name from your context (`FIX_BRANCH`). Do not invent a different name.
 
@@ -169,6 +184,12 @@ git checkout -b "$FIX_BRANCH"
 - Read the failing workflow file in full before editing.
 - YAML is whitespace-sensitive; validate indentation carefully.
 
+**`scripts/verify-ebuild.sh` fixes:**
+- The build failed because declared DEPENDs were not installed before `ebuild … compile`.
+- Add a "4/5" step between fetch and build that calls `emerge --onlydeps --quiet-build "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}"`.
+- Derive `REPO_NAME` from `cat "$OVERLAY_ROOT/profiles/repo_name"` and `PV` from the ebuild filename: `EBUILD_BASENAME=$(basename "$EBUILD_FILE" .ebuild); PV="${EBUILD_BASENAME#${NAME}-}"`.
+- File to edit: `scripts/verify-ebuild.sh`.
+
 Make your edits, then commit and push:
 
 ```bash
@@ -177,21 +198,22 @@ git commit -m "ci: <short description of what was broken and how it is fixed>"
 git push origin "$FIX_BRANCH" --force-with-lease
 ```
 
-Open a PR — **not** a draft:
+### 3c. Open the fix PR (not a draft)
+
+Set the body, then call `scripts/ci/open-fix-pr.sh`:
 
 ```bash
-gh pr create \
-  --title "ci-fix: <short description>" \
-  --body "$(printf '## Problem\n\n<one paragraph: what failed and why>\n\n## Fix\n\n<one paragraph: what was changed and why it prevents recurrence>\n\n## Reference\n\nFailed run: '"$RUN_URL"'\n\nGenerated with [Claude Code](https://claude.com/claude-code)')" \
-  --base main \
-  --head "$FIX_BRANCH" \
-  --repo "$REPO"
+PR_TITLE="ci-fix: <short description>"
+PR_BODY="$(printf '## Problem\n\n<one paragraph: what failed and why>\n\n## Fix\n\n<one paragraph: what was changed and why it prevents recurrence>\n\n## Reference\n\nFailed run: '"$RUN_URL"'\nTracking issue: '"$ISSUE_URL"'\n\nCloses #'"$ISSUE_NUMBER"'\n\nGenerated with [Claude Code](https://claude.com/claude-code)')"
+
+FIX_PR_URL=$(PR_TITLE="$PR_TITLE" PR_BODY="$PR_BODY" bash scripts/ci/open-fix-pr.sh)
 ```
 
-After a successful push and PR creation, write the result and print a summary:
+After a successful push and PR creation, write the result and set `ARTIFACT_URLS` for Step 5, then go to Step 5:
 
 ```bash
-echo "success: PR opened at <pr-url>" > /tmp/ci-debugger-result
+echo "success: issue $ISSUE_URL, fix PR $FIX_PR_URL" > /tmp/ci-debugger-result
+ARTIFACT_URLS="tracking issue: $ISSUE_URL — fix PR: $FIX_PR_URL"
 ```
 
 If the push or PR creation fails, write a failure result before stopping:
@@ -204,28 +226,43 @@ echo "failure: <one-line reason>" > /tmp/ci-debugger-result
 
 ## Step 4: Transient Path — GitHub Issue
 
-Do not push any branch or open a PR. Open a GitHub Issue instead:
+Do not push any branch or open a PR. Open a GitHub Issue instead using `scripts/ci/create-tracking-issue.sh`. The script automatically skips the `--label` flag if the label does not exist:
 
 ```bash
-gh issue create \
-  --title "CI transient failure: $WORKFLOW_NAME ($(date +%Y-%m-%d))" \
-  --body "$(printf '## Failure Summary\n\nWorkflow **'"$WORKFLOW_NAME"'** (run [#'"$RUN_ID"']('"$RUN_URL"')) failed with a transient error that does not require a code fix.\n\n## Root Cause\n\n<classification and the key log lines that support it>\n\n## Recommendation\n\nRe-trigger the workflow manually once the underlying condition resolves. No code change is needed.\n\nGenerated with [Claude Code](https://claude.com/claude-code)')" \
-  --label "ci-transient" \
-  --repo "$REPO"
+ISSUE_TITLE="CI transient failure: $WORKFLOW_NAME ($(date +%Y-%m-%d))"
+ISSUE_BODY="$(printf '## Failure Summary\n\nWorkflow **'"$WORKFLOW_NAME"'** (run [#'"$RUN_ID"']('"$RUN_URL"')) failed with a transient error that does not require a code fix.\n\n## Root Cause\n\n<classification and the key log lines that support it>\n\n## Recommendation\n\nRe-trigger the workflow manually once the underlying condition resolves. No code change is needed.\n\nGenerated with [Claude Code](https://claude.com/claude-code)')"
+
+ISSUE_URL=$(ISSUE_TITLE="$ISSUE_TITLE" ISSUE_BODY="$ISSUE_BODY" ISSUE_LABEL="ci-transient" bash scripts/ci/create-tracking-issue.sh)
 ```
 
-If the `ci-transient` label does not exist, omit `--label` — do not attempt to create labels.
-
-After a successful issue creation, write the result:
+After a successful issue creation, set `ARTIFACT_URLS` and go to Step 5:
 
 ```bash
-echo "success: transient issue opened" > /tmp/ci-debugger-result
+ARTIFACT_URLS="transient issue: $ISSUE_URL"
+echo "success: transient issue opened at $ISSUE_URL" > /tmp/ci-debugger-result
 ```
 
 If issue creation fails, write a failure result before stopping:
 
 ```bash
 echo "failure: <one-line reason>" > /tmp/ci-debugger-result
+```
+
+---
+
+## Step 5: Comment on the Triggering PR
+
+After completing Step 3 or Step 4, call `scripts/ci/comment-triggering-pr.sh`. It silently exits 0 if no open PR exists for `HEAD_BRANCH`.
+
+`COMMENT_BODY` values:
+- **Fixable (Step 3):** `ARTIFACT_URLS` = `"tracking issue: $ISSUE_URL — fix PR: $FIX_PR_URL"`
+- **Transient (Step 4):** `ARTIFACT_URLS` = `"transient issue: $ISSUE_URL"`
+
+```bash
+COMMENT_BODY="$(printf 'The CI verify failure on this PR has been diagnosed.\n\n%s\n\nNo action needed on your end — this PR will be re-verified once the fix lands (fixable) or can be re-triggered manually (transient).\n\nGenerated with [Claude Code](https://claude.com/claude-code)' "$ARTIFACT_URLS")"
+
+COMMENT_BODY="$COMMENT_BODY" bash scripts/ci/comment-triggering-pr.sh || \
+  echo "Warning: failed to comment on triggering PR — continuing" >&2
 ```
 
 ---
