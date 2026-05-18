@@ -21,10 +21,10 @@ CRATES="
 	anstyle@1.0.14
 	anyhow@1.0.102
 	arrayvec@0.7.6
-	askama@0.15.6
-	askama_derive@0.15.6
-	askama_macros@0.15.6
-	askama_parser@0.15.6
+	askama@0.16.0
+	askama_derive@0.16.0
+	askama_macros@0.16.0
+	askama_parser@0.16.0
 	autocfg@1.5.0
 	beef@0.5.2
 	bitflags@1.3.2
@@ -43,19 +43,17 @@ CRATES="
 	ciborium-io@0.2.2
 	ciborium-ll@0.2.2
 	ciborium@0.2.2
-	clap@4.6.0
+	clap@4.6.1
 	clap_builder@4.6.0
-	clap_complete@4.6.0
-	clap_derive@4.6.0
+	clap_complete@4.6.4
+	clap_derive@4.6.1
 	clap_lex@1.0.0
 	color-print-proc-macro@0.3.7
 	color-print@0.3.7
 	colorchoice@1.0.4
-	config@0.15.22
 	console@0.16.3
 	const-oid@0.10.2
 	convert_case@0.10.0
-	convert_case@0.6.0
 	coolor@1.1.0
 	core-foundation-sys@0.8.7
 	cpufeatures@0.2.17
@@ -123,7 +121,7 @@ CRATES="
 	globset@0.4.18
 	half@2.7.1
 	hashbrown@0.14.5
-	hashbrown@0.16.1
+	hashbrown@0.17.0
 	heck@0.5.0
 	home@0.5.12
 	humantime@2.3.0
@@ -133,7 +131,7 @@ CRATES="
 	ident_case@1.0.1
 	if_chain@1.0.3
 	ignore@0.4.25
-	indexmap@2.13.1
+	indexmap@2.14.0
 	insta-cmd@0.6.0
 	insta@1.47.2
 	is_executable@1.0.5
@@ -182,6 +180,8 @@ CRATES="
 	pest_derive@2.8.5
 	pest_generator@2.8.5
 	pest_meta@2.8.5
+	petname-macros@3.0.0
+	petname@3.0.0
 	pin-project-lite@0.2.16
 	pin-utils@0.1.0
 	plotters-backend@0.3.7
@@ -194,14 +194,16 @@ CRATES="
 	ppv-lite86@0.2.21
 	proc-macro-crate@3.4.0
 	proc-macro2@1.0.106
-	pulldown-cmark@0.13.1
+	pulldown-cmark@0.13.3
 	quote@1.0.45
 	r-efi@5.3.0
-	rand@0.9.2
+	rand@0.10.1
+	rand@0.9.4
 	rand_chacha@0.9.0
+	rand_core@0.10.1
 	rand_core@0.9.5
 	rayon-core@1.13.0
-	rayon@1.11.0
+	rayon@1.12.0
 	redox_syscall@0.5.18
 	redox_users@0.4.6
 	redox_users@0.5.2
@@ -212,7 +214,6 @@ CRATES="
 	regex-syntax@0.8.8
 	regex@1.12.3
 	relative-path@1.9.3
-	ron@0.12.0
 	rstest@0.26.1
 	rstest_macros@0.26.1
 	rustc-hash@2.1.1
@@ -245,9 +246,8 @@ CRATES="
 	signal-hook@0.3.18
 	signal-hook@0.4.4
 	similar@2.7.0
-	similar@3.0.0
+	similar@3.1.0
 	skim-common@0.2.0
-	skim-tuikit@0.6.6
 	skim@0.20.5
 	slab@0.4.11
 	smallvec@1.15.1
@@ -261,6 +261,7 @@ CRATES="
 	supports-hyperlinks@3.2.0
 	syn@2.0.117
 	synoptic@2.2.9
+	tabwriter@1.4.1
 	tempfile@3.27.0
 	term@0.7.0
 	termimad@0.34.1
@@ -271,8 +272,8 @@ CRATES="
 	thiserror@2.0.18
 	thread_local@1.1.9
 	time-core@0.1.8
-	time-macros@0.2.26
-	time@0.3.46
+	time-macros@0.2.27
+	time@0.3.47
 	timer@0.2.0
 	tinytemplate@1.2.1
 	toml@1.0.7+spec-1.1.0
@@ -286,7 +287,6 @@ CRATES="
 	tree-sitter-highlight@0.26.8
 	tree-sitter-language@0.1.6
 	tree-sitter@0.26.8
-	typeid@1.0.3
 	typenum@1.19.0
 	ucd-trie@0.1.7
 	unicase@2.9.0
@@ -351,7 +351,7 @@ CRATES="
 	zmij@1.0.16
 "
 
-RUST_MIN_VER="1.89.0"
+RUST_MIN_VER="1.94"
 
 inherit cargo
 
