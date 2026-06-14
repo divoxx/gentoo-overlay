@@ -12,7 +12,7 @@ CRATES="
 	anes@0.1.6
 	ansi-escape-sequences@0.1.0
 	ansi-str@0.9.0
-	ansi-to-html@0.2.2
+	ansi-to-html@0.2.3
 	ansitok@0.3.0
 	anstream@1.0.0
 	anstyle-parse@1.0.0
@@ -21,10 +21,10 @@ CRATES="
 	anstyle@1.0.14
 	anyhow@1.0.102
 	arrayvec@0.7.6
-	askama@0.15.6
-	askama_derive@0.15.6
-	askama_macros@0.15.6
-	askama_parser@0.15.6
+	askama@0.16.0
+	askama_derive@0.16.0
+	askama_macros@0.16.0
+	askama_parser@0.16.0
 	autocfg@1.5.0
 	beef@0.5.2
 	bitflags@1.3.2
@@ -39,14 +39,14 @@ CRATES="
 	cfg_aliases@0.1.1
 	cfg_aliases@0.2.1
 	char_index@0.1.4
-	chrono@0.4.44
+	chrono@0.4.45
 	ciborium-io@0.2.2
 	ciborium-ll@0.2.2
 	ciborium@0.2.2
-	clap@4.6.0
+	clap@4.6.1
 	clap_builder@4.6.0
-	clap_complete@4.6.1
-	clap_derive@4.6.0
+	clap_complete@4.6.5
+	clap_derive@4.6.1
 	clap_lex@1.0.0
 	color-print-proc-macro@0.3.7
 	color-print@0.3.7
@@ -76,7 +76,7 @@ CRATES="
 	darling@0.20.11
 	darling_core@0.20.11
 	darling_macro@0.20.11
-	dashmap@6.1.0
+	dashmap@6.2.1
 	defer-drop@1.3.0
 	deranged@0.5.5
 	derive_builder@0.20.2
@@ -130,7 +130,7 @@ CRATES="
 	iana-time-zone@0.1.64
 	ident_case@1.0.1
 	if_chain@1.0.3
-	ignore@0.4.25
+	ignore@0.4.26
 	indexmap@2.14.0
 	insta-cmd@0.6.0
 	insta@1.47.2
@@ -144,24 +144,26 @@ CRATES="
 	lazy-regex-proc_macros@3.5.1
 	lazy-regex@3.5.1
 	lazy_static@1.5.0
-	libc@0.2.182
+	libc@0.2.186
 	libredox@0.1.12
 	linux-raw-sys@0.12.1
 	litrs@1.0.0
 	lock_api@0.4.14
-	log@0.4.29
+	log@0.4.32
+	matchers@0.2.0
 	memchr@2.7.6
 	memo-map@0.3.3
-	minijinja@2.19.0
+	minijinja@2.20.0
 	minimad@0.14.0
 	minimal-lexical@0.2.1
 	mio@1.1.1
 	nix@0.28.0
 	nix@0.29.0
-	nix@0.31.2
+	nix@0.31.3
 	nohash-hasher@0.2.0
 	nom@7.1.3
 	normalize-path@0.2.1
+	nu-ansi-term@0.50.3
 	num-conv@0.2.0
 	num-traits@0.2.19
 	num_threads@0.1.7
@@ -180,6 +182,8 @@ CRATES="
 	pest_derive@2.8.5
 	pest_generator@2.8.5
 	pest_meta@2.8.5
+	petname-macros@3.0.0
+	petname@3.0.0
 	pin-project-lite@0.2.16
 	pin-utils@0.1.0
 	plotters-backend@0.3.7
@@ -192,14 +196,16 @@ CRATES="
 	ppv-lite86@0.2.21
 	proc-macro-crate@3.4.0
 	proc-macro2@1.0.106
-	pulldown-cmark@0.13.1
+	pulldown-cmark@0.13.3
 	quote@1.0.45
 	r-efi@5.3.0
-	rand@0.9.2
+	rand@0.10.1
+	rand@0.9.4
 	rand_chacha@0.9.0
+	rand_core@0.10.1
 	rand_core@0.9.5
 	rayon-core@1.13.0
-	rayon@1.11.0
+	rayon@1.12.0
 	redox_syscall@0.5.18
 	redox_users@0.4.6
 	redox_users@0.5.2
@@ -210,6 +216,7 @@ CRATES="
 	regex-syntax@0.8.8
 	regex@1.12.3
 	relative-path@1.9.3
+	renamore@0.3.2
 	rstest@0.26.1
 	rstest_macros@0.26.1
 	rustc-hash@2.1.1
@@ -226,11 +233,12 @@ CRATES="
 	serde_core@1.0.228
 	serde_derive@1.0.228
 	serde_derive_internals@0.29.1
-	serde_json@1.0.149
+	serde_json@1.0.150
 	serde_spanned@1.0.4
 	serial2@0.2.33
 	sha2@0.10.9
 	sha2@0.11.0
+	sharded-slab@0.1.7
 	shared_library@0.1.9
 	shell-escape@0.1.5
 	shell-quote@0.7.2
@@ -242,7 +250,7 @@ CRATES="
 	signal-hook@0.3.18
 	signal-hook@0.4.4
 	similar@2.7.0
-	similar@3.1.0
+	similar@3.1.1
 	skim-common@0.2.0
 	skim-tuikit@0.6.6
 	skim@0.20.5
@@ -258,6 +266,7 @@ CRATES="
 	supports-hyperlinks@3.2.0
 	syn@2.0.117
 	synoptic@2.2.9
+	tabwriter@1.4.1
 	tempfile@3.27.0
 	term@0.7.0
 	termimad@0.34.1
@@ -268,8 +277,8 @@ CRATES="
 	thiserror@2.0.18
 	thread_local@1.1.9
 	time-core@0.1.8
-	time-macros@0.2.26
-	time@0.3.46
+	time-macros@0.2.27
+	time@0.3.47
 	timer@0.2.0
 	tinytemplate@1.2.1
 	toml@1.0.7+spec-1.1.0
@@ -279,10 +288,15 @@ CRATES="
 	toml_edit@0.25.5+spec-1.1.0
 	toml_parser@1.1.0+spec-1.1.0
 	toml_writer@1.1.0+spec-1.1.0
+	tracing@0.1.44
+	tracing-attributes@0.1.31
+	tracing-core@0.1.36
+	tracing-log@0.2.0
+	tracing-subscriber@0.3.23
 	tree-sitter-bash@0.25.1
-	tree-sitter-highlight@0.26.8
+	tree-sitter-highlight@0.26.9
 	tree-sitter-language@0.1.6
-	tree-sitter@0.26.8
+	tree-sitter@0.26.9
 	typenum@1.19.0
 	ucd-trie@0.1.7
 	unicase@2.9.0
@@ -292,6 +306,7 @@ CRATES="
 	unicode-width@0.2.2
 	urlencoding@2.1.3
 	utf8parse@0.2.2
+	valuable@0.1.1
 	vergen-gitcl@9.1.0
 	vergen-lib@9.1.0
 	vergen@9.1.0
@@ -309,7 +324,7 @@ CRATES="
 	wasm-bindgen@0.2.108
 	web-sys@0.3.85
 	which@7.0.3
-	which@8.0.2
+	which@8.0.3
 	winapi-i686-pc-windows-gnu@0.4.0
 	winapi-util@0.1.11
 	winapi-x86_64-pc-windows-gnu@0.4.0
@@ -347,7 +362,7 @@ CRATES="
 	zmij@1.0.16
 "
 
-RUST_MIN_VER="1.93"
+RUST_MIN_VER="1.95"
 
 inherit cargo
 
