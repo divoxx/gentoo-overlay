@@ -186,6 +186,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ steps.ctx.outputs.run_id }}
           RUN_URL: ${{ steps.ctx.outputs.run_url }}
