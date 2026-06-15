@@ -97,11 +97,12 @@ The logs from `gh run view --log-failed` include pkgcheck output and build error
 
 ```bash
 git add <category>/<name>/
-git commit -m "ci: fix <category>/<name> verify failure — <one-line description>"
-git push origin "$HEAD_BRANCH" --force-with-lease
+MESSAGE="ci: fix <category>/<name> verify failure — <one-line description>" \
+  BRANCH="$HEAD_BRANCH" FORCE=true \
+  bash scripts/ci/git-commit-signed.sh
 ```
 
-The existing PR will pick up the new commit automatically. Do NOT open a new PR.
+`git-commit-signed.sh` creates the commit via the GitHub API so GitHub marks it as Verified. The existing PR will pick up the new commit automatically. Do NOT open a new PR.
 
 After a successful push, write the result and print a summary:
 
@@ -194,9 +195,12 @@ Make your edits, then commit and push:
 
 ```bash
 git add <files>
-git commit -m "ci: <short description of what was broken and how it is fixed>"
-git push origin "$FIX_BRANCH" --force-with-lease
+MESSAGE="ci: <short description of what was broken and how it is fixed>" \
+  BRANCH="$FIX_BRANCH" \
+  bash scripts/ci/git-commit-signed.sh
 ```
+
+`git-commit-signed.sh` creates the commit via the GitHub API so GitHub marks it as Verified.
 
 ### 3c. Open the fix PR (not a draft)
 
