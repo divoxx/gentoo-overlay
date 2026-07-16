@@ -5,5 +5,7 @@ RUN echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf && \
     echo 'FEATURES="-pid-sandbox -ipc-sandbox -network-sandbox"' >> /etc/portage/make.conf && \
     emerge --sync && \
     emerge -u1vDN --quiet-build sys-apps/portage && \
-    emerge -uvDN --with-bdeps=y --backtrack=30 --quiet-build @world && \
+    emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
+    perl-cleaner --all -- --quiet-build && \
+    emerge -uvDN --with-bdeps=y --backtrack=50 --quiet-build @world && \
     emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin app-misc/jq
