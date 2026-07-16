@@ -19,10 +19,10 @@ CRATES="
 	ansi-to-tui@8.0.1
 	ansitok@0.3.0
 	anstream@1.0.0
-	anstyle@1.0.14
 	anstyle-parse@1.0.0
 	anstyle-query@1.1.5
 	anstyle-wincon@3.0.11
+	anstyle@1.0.14
 	anyhow@1.0.103
 	approx@0.5.1
 	arboard@3.6.1
@@ -42,8 +42,8 @@ CRATES="
 	bitflags@2.13.0
 	block-buffer@0.10.4
 	block-buffer@0.12.0
-	bon@3.9.3
 	bon-macros@3.9.3
+	bon@3.9.3
 	bstr@1.12.1
 	bumpalo@3.19.1
 	by_address@1.2.1
@@ -57,9 +57,9 @@ CRATES="
 	cfg_aliases@0.2.1
 	char_index@0.1.4
 	chrono@0.4.45
-	ciborium@0.2.2
 	ciborium-io@0.2.2
 	ciborium-ll@0.2.2
+	ciborium@0.2.2
 	clap@4.6.1
 	clap_builder@4.6.0
 	clap_complete@4.6.7
@@ -67,8 +67,8 @@ CRATES="
 	clap_lex@1.0.0
 	clipboard-win@5.4.1
 	color-eyre@0.6.5
-	color-print@0.3.7
 	color-print-proc-macro@0.3.7
+	color-print@0.3.7
 	color-spantrace@0.3.0
 	colorchoice@1.0.4
 	compact_str@0.9.1
@@ -79,17 +79,17 @@ CRATES="
 	core-foundation-sys@0.8.7
 	cpufeatures@0.2.17
 	cpufeatures@0.3.0
-	criterion@0.8.2
 	criterion-plot@0.8.2
+	criterion@0.8.2
 	critical-section@1.2.0
-	crokey@1.3.0
 	crokey-proc_macros@1.3.0
-	crossbeam@0.8.4
+	crokey@1.3.0
 	crossbeam-channel@0.5.15
 	crossbeam-deque@0.8.6
 	crossbeam-epoch@0.9.18
 	crossbeam-queue@0.3.12
 	crossbeam-utils@0.8.21
+	crossbeam@0.8.4
 	crossterm@0.29.0
 	crossterm_winapi@0.9.1
 	crunchy@0.2.4
@@ -108,12 +108,12 @@ CRATES="
 	derive_builder@0.20.2
 	derive_builder_core@0.20.2
 	derive_builder_macro@0.20.2
-	derive_more@2.1.1
 	derive_more-impl@2.1.1
+	derive_more@2.1.1
 	digest@0.10.7
 	digest@0.11.2
-	dirs@6.0.0
 	dirs-sys@0.5.0
+	dirs@6.0.0
 	dispatch2@0.3.1
 	document-features@0.2.12
 	downcast-rs@1.2.1
@@ -141,7 +141,6 @@ CRATES="
 	foldhash@0.2.0
 	frizbee@0.9.0
 	fs2@0.4.3
-	futures@0.3.32
 	futures-channel@0.3.32
 	futures-core@0.3.32
 	futures-executor@0.3.32
@@ -151,6 +150,7 @@ CRATES="
 	futures-task@0.3.32
 	futures-timer@3.0.3
 	futures-util@0.3.32
+	futures@0.3.32
 	generic-array@0.14.7
 	gethostname@1.1.0
 	getrandom@0.2.17
@@ -169,16 +169,16 @@ CRATES="
 	home@0.5.12
 	humantime@2.4.0
 	hybrid-array@0.4.8
-	iana-time-zone@0.1.64
 	iana-time-zone-haiku@0.1.2
+	iana-time-zone@0.1.64
 	ident_case@1.0.1
 	if_chain@1.0.3
 	ignore@0.4.27
 	indenter@0.3.4
 	indexmap@2.14.0
 	indoc@2.0.7
-	insta@1.48.0
 	insta-cmd@0.7.0
+	insta@1.48.0
 	instability@0.3.12
 	is-docker@0.2.0
 	is-wsl@0.4.0
@@ -191,8 +191,8 @@ CRATES="
 	kanal@0.1.1
 	kasuari@0.4.12
 	lab@0.11.0
-	lazy-regex@3.5.1
 	lazy-regex-proc_macros@3.5.1
+	lazy-regex@3.5.1
 	lazy_static@1.5.0
 	libc@0.2.186
 	libm@0.2.16
@@ -228,13 +228,13 @@ CRATES="
 	num-derive@0.4.2
 	num-traits@0.2.19
 	num_threads@0.1.7
-	objc2@0.6.4
 	objc2-app-kit@0.3.2
 	objc2-core-foundation@0.3.2
 	objc2-core-graphics@0.3.2
 	objc2-encode@4.1.0
 	objc2-foundation@0.3.2
 	objc2-io-surface@0.3.2
+	objc2@0.6.4
 	object@0.37.3
 	once_cell@1.21.4
 	once_cell_polyfill@1.70.2
@@ -258,8 +258,8 @@ CRATES="
 	pest_generator@2.8.5
 	pest_meta@2.8.5
 	petgraph@0.8.3
-	petname@3.1.0
 	petname-macros@3.1.0
+	petname@3.1.0
 	phf@0.11.3
 	phf_codegen@0.11.3
 	phf_generator@0.11.3
@@ -267,9 +267,9 @@ CRATES="
 	phf_shared@0.11.3
 	pin-project-lite@0.2.16
 	pkg-config@0.3.33
-	plotters@0.3.7
 	plotters-backend@0.3.7
 	plotters-svg@0.3.7
+	plotters@0.3.7
 	portable-atomic@1.13.0
 	portable-pty@0.9.0
 	powerfmt@0.2.0
@@ -281,28 +281,28 @@ CRATES="
 	quote@1.0.45
 	r-efi@5.3.0
 	r-efi@6.0.0
-	rand@0.8.6
 	rand@0.10.1
-	rand_core@0.6.4
+	rand@0.8.6
 	rand_core@0.10.1
-	ratatui@0.30.2
+	rand_core@0.6.4
 	ratatui-core@0.1.2
 	ratatui-crossterm@0.1.2
 	ratatui-macros@0.7.2
 	ratatui-termina@0.1.0
 	ratatui-termwiz@0.1.2
 	ratatui-widgets@0.3.2
+	ratatui@0.30.2
 	raw-cpuid@11.6.0
-	rayon@1.12.0
 	rayon-core@1.13.0
+	rayon@1.12.0
 	redox_syscall@0.5.18
 	redox_users@0.5.2
-	ref-cast@1.0.25
 	ref-cast-impl@1.0.25
+	ref-cast@1.0.25
 	reflink-copy@0.1.30
-	regex@1.12.4
 	regex-automata@0.4.13
 	regex-syntax@0.8.11
+	regex@1.12.4
 	relative-path@1.9.3
 	renamore@0.3.2
 	roff@1.1.1
@@ -337,10 +337,10 @@ CRATES="
 	shellexpand@3.1.2
 	shlex@1.3.0
 	shlex@2.0.1
-	signal-hook@0.3.18
-	signal-hook@0.4.4
 	signal-hook-mio@0.2.5
 	signal-hook-registry@1.4.8
+	signal-hook@0.3.18
+	signal-hook@0.4.4
 	simdutf8@0.1.5
 	similar@2.7.0
 	similar@3.1.1
@@ -368,20 +368,20 @@ CRATES="
 	terminfo@0.9.0
 	termios@0.3.3
 	termwiz@0.23.3
-	thiserror@1.0.69
-	thiserror@2.0.18
 	thiserror-impl@1.0.69
 	thiserror-impl@2.0.18
+	thiserror@1.0.69
+	thiserror@2.0.18
 	thread_local@1.1.9
-	time@0.3.51
 	time-core@0.1.9
 	time-macros@0.2.30
+	time@0.3.51
 	tinytemplate@1.2.1
 	tinyvec@1.11.0
 	tinyvec_macros@0.1.1
-	tokio@1.52.3
 	tokio-macros@2.7.0
 	tokio-util@0.7.18
+	tokio@1.52.3
 	toml@1.0.7+spec-1.1.0
 	toml_datetime@0.7.5+spec-1.1.0
 	toml_datetime@1.1.0+spec-1.1.0
@@ -389,16 +389,16 @@ CRATES="
 	toml_edit@0.25.5+spec-1.1.0
 	toml_parser@1.1.0+spec-1.1.0
 	toml_writer@1.1.0+spec-1.1.0
-	tracing@0.1.44
 	tracing-attributes@0.1.31
 	tracing-core@0.1.36
 	tracing-error@0.2.1
 	tracing-log@0.2.0
 	tracing-subscriber@0.3.23
-	tree-sitter@0.26.10
+	tracing@0.1.44
 	tree-sitter-bash@0.25.1
 	tree-sitter-highlight@0.26.10
 	tree-sitter-language@0.1.6
+	tree-sitter@0.26.10
 	tree_magic_mini@3.2.2
 	tui-term@0.3.4
 	typenum@1.19.0
@@ -416,10 +416,73 @@ CRATES="
 	utf8parse@0.2.2
 	uuid@1.23.3
 	valuable@0.1.1
-	vergen@10.0.1
 	vergen-gitcl@10.0.1
 	vergen-lib@10.0.1
+	vergen@10.0.1
 	version_check@0.9.5
+	vt100@0.16.2
+	vte@0.14.1
+	vte@0.15.0
+	vtparse@0.6.2
+	wait-timeout@0.2.1
+	walkdir@2.5.0
+	wasi@0.11.1+wasi-snapshot-preview1
+	wasip2@1.0.2+wasi-0.2.9
+	wasm-bindgen-macro-support@0.2.108
+	wasm-bindgen-macro@0.2.108
+	wasm-bindgen-shared@0.2.108
+	wasm-bindgen@0.2.108
+	wayland-backend@0.3.15
+	wayland-client@0.31.14
+	wayland-protocols-wlr@0.3.12
+	wayland-protocols@0.32.13
+	wayland-scanner@0.31.10
+	wayland-sys@0.31.11
+	web-sys@0.3.85
+	wezterm-bidi@0.2.3
+	wezterm-blob-leases@0.1.1
+	wezterm-color-types@0.3.0
+	wezterm-dynamic-derive@0.1.1
+	wezterm-dynamic@0.2.1
+	wezterm-input-types@0.1.0
+	which@8.0.4
+	winapi-i686-pc-windows-gnu@0.4.0
+	winapi-util@0.1.11
+	winapi-x86_64-pc-windows-gnu@0.4.0
+	winapi@0.3.9
+	windows-collections@0.3.2
+	windows-core@0.62.2
+	windows-future@0.3.2
+	windows-implement@0.60.2
+	windows-interface@0.59.3
+	windows-link@0.2.1
+	windows-numerics@0.3.1
+	windows-result@0.4.1
+	windows-strings@0.5.1
+	windows-sys@0.60.2
+	windows-sys@0.61.2
+	windows-targets@0.53.5
+	windows-threading@0.2.1
+	windows@0.62.2
+	windows_aarch64_gnullvm@0.53.1
+	windows_aarch64_msvc@0.53.1
+	windows_i686_gnu@0.53.1
+	windows_i686_gnullvm@0.53.1
+	windows_i686_msvc@0.53.1
+	windows_x86_64_gnu@0.53.1
+	windows_x86_64_gnullvm@0.53.1
+	windows_x86_64_msvc@0.53.1
+	winnow@0.7.15
+	winnow@1.0.0
+	winreg@0.10.1
+	wit-bindgen@0.51.0
+	wl-clipboard-rs@0.9.3
+	wrap-ansi@0.1.0
+	x11rb-protocol@0.13.2
+	x11rb@0.13.2
+	zerocopy-derive@0.8.33
+	zerocopy@0.8.33
+	zmij@1.0.16
 "
 
 RUST_MIN_VER="1.95"
