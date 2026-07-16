@@ -149,21 +149,26 @@ jobs:
             fi
           else
             # For build-image, auto-update, and non-auto-update verify failures:
-            # skip if a ci-fix PR already exists today for the same workflow.
+            # skip if ANY open ci-fix PR already exists for the same workflow,
+            # regardless of date. These failures recur (e.g. the weekly image
+            # build); the fix branch embeds today's date, so matching only the
+            # exact dated branch let one near-duplicate PR pile up per run.
             SLUG=$(echo "$WORKFLOW_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
             DATE=$(date +%Y-%m-%d)
             BRANCH="ci-fix/${SLUG}-${DATE}"
             echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
 
+            # Match every open PR whose head branch starts with ci-fix/<slug>-.
+            # SLUG is sanitized to [:alnum:]- above, so inlining it into the jq
+            # filter is safe.
             EXISTING=$(gh pr list \
-              --head "$BRANCH" \
               --state open \
-              --json number \
+              --json number,headRefName \
               --repo "$REPO" \
-              -q '.[0].number // empty')
+              -q "[.[] | select(.headRefName | startswith(\"ci-fix/${SLUG}-\"))] | .[0].number // empty")
 
             if [ -n "${EXISTING:-}" ]; then
-              echo "Fix PR #$EXISTING already open for $BRANCH — skipping"
+              echo "Fix PR #$EXISTING already open for ci-fix/${SLUG}-* — skipping"
               echo "skip=true" >> "$GITHUB_OUTPUT"
             else
               echo "skip=false" >> "$GITHUB_OUTPUT"
