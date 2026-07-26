@@ -9,13 +9,20 @@
 		<remote-id type="github">pimalaya/himalaya</remote-id>
 	</upstream>
 	<use>
+		<flag name="gmail">Enable Gmail REST API backend support</flag>
 		<flag name="imap">Enable IMAP backend support</flag>
+		<flag name="jmap">Enable JMAP backend support</flag>
+		<flag name="m2dir">Enable m2dir backend support</flag>
 		<flag name="maildir">Enable Maildir backend support</flag>
+		<flag name="msgraph">Enable Microsoft Graph REST API backend support</flag>
+		<flag name="native-tls">Use OpenSSL via native-tls as the TLS provider</flag>
 		<flag name="notmuch">Enable Notmuch mail indexing backend support</flag>
 		<flag name="oauth2">Enable OAuth2 authentication support (requires keyring)</flag>
 		<flag name="pgp-commands">Enable PGP support via external commands (e.g. gpg CLI)</flag>
 		<flag name="pgp-gpg">Enable PGP support via GPGME (system GPG)</flag>
 		<flag name="pgp-native">Enable native Rust PGP implementation support</flag>
+		<flag name="rustls-aws">Use rustls with the aws-lc-rs crypto provider as the TLS provider</flag>
+		<flag name="rustls-ring">Use rustls with the ring crypto provider as the TLS provider</flag>
 		<flag name="sendmail">Enable sending via the system sendmail binary</flag>
 		<flag name="smtp">Enable SMTP sending support</flag>
 		<flag name="wizard">Enable the interactive account setup wizard</flag>
