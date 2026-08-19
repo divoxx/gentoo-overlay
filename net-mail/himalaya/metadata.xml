@@ -21,6 +21,7 @@
 		<flag name="pgp-commands">Enable PGP support via external commands (e.g. gpg CLI)</flag>
 		<flag name="pgp-gpg">Enable PGP support via GPGME (system GPG)</flag>
 		<flag name="pgp-native">Enable native Rust PGP implementation support</flag>
+		<flag name="pimdir">Enable pimdir local store backend support (builds a bundled SQLite)</flag>
 		<flag name="rustls-aws">Use rustls with the aws-lc-rs crypto provider as the TLS provider</flag>
 		<flag name="rustls-ring">Use rustls with the ring crypto provider as the TLS provider</flag>
 		<flag name="sendmail">Enable sending via the system sendmail binary</flag>
