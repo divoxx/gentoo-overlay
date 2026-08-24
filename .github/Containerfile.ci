@@ -1,19 +1,26 @@
 ARG BASE_IMAGE=gentoo/stage3:amd64-systemd
 FROM ${BASE_IMAGE}
 
-# The sys-apps/portage upgrade is split into an --onlydeps pass followed by a
-# --nodeps pass. This keeps portage the sole package in its own merge
-# transaction: if portage self-upgrades partway through a multi-package merge,
-# the still-running emerge process forks _MergeProcess children that mix new
-# and old portage modules, e.g.
-#   TypeError: movefile() got an unexpected keyword argument 'encoding'
 RUN echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf && \
     echo 'FEATURES="-pid-sandbox -ipc-sandbox -network-sandbox"' >> /etc/portage/make.conf && \
     echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
-    emerge --sync && \
-    emerge -u1vDN --quiet-build --onlydeps sys-apps/portage && \
-    emerge -u1vN --quiet-build --nodeps sys-apps/portage && \
-    emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
+    emerge --sync
+
+# sys-apps/portage is upgraded first and alone, only if an update is pending,
+# per Gentoo's own recommendation (wiki.gentoo.org/wiki/Portage): run
+# `emerge --oneshot sys-apps/portage` before anything else. Omitting --deep
+# keeps resolution shallow to portage's own direct deps (merged ahead of it,
+# under the still-old portage) instead of pulling in unrelated @system/@world
+# members alongside it, so portage is always last in its own merge list and
+# never shares a process with a merge that runs after it self-upgrades.
+RUN if emerge --pretend --update sys-apps/portage | grep -q '^\[ebuild'; then \
+        emerge --oneshot --update --quiet-build sys-apps/portage; \
+    else \
+        echo "sys-apps/portage is already up to date, skipping"; \
+    fi
+
+# Everything else, now guaranteed to run under a current portage.
+RUN emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
     perl-cleaner --all -- --quiet-build && \
     emerge -uvDN --with-bdeps=y --backtrack=50 --quiet-build @world && \
     emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin app-misc/jq net-libs/nodejs && \
