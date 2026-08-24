@@ -1,18 +1,37 @@
 ARG BASE_IMAGE=gentoo/stage3:amd64-systemd
 FROM ${BASE_IMAGE}
 
-# The sys-apps/portage upgrade is split into an --onlydeps pass followed by a
-# --nodeps pass. This keeps portage the sole package in its own merge
-# transaction: if portage self-upgrades partway through a multi-package merge,
-# the still-running emerge process forks _MergeProcess children that mix new
-# and old portage modules, e.g.
-#   TypeError: movefile() got an unexpected keyword argument 'encoding'
 RUN echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf && \
     echo 'FEATURES="-pid-sandbox -ipc-sandbox -network-sandbox"' >> /etc/portage/make.conf && \
     echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
-    emerge --sync && \
-    emerge -u1vDN --quiet-build --onlydeps sys-apps/portage && \
-    emerge -u1vN --quiet-build --nodeps sys-apps/portage && \
+    emerge --sync
+
+# sys-apps/portage is upgraded first, alone, and with --nodeps.
+#
+# portage-3.0.82 dropped the Python 2 unicode conversion layer, which removed
+# the encoding= keyword from portage.util.movefile.movefile(). An emerge
+# process that starts on the old portage and self-upgrades part-way through its
+# merge list then forks _MergeProcess children mixing old and new modules:
+#   TypeError: movefile() got an unexpected keyword argument 'encoding'
+# Every merge queued behind portage in that same process dies.
+#
+# An earlier attempt (6d6df14) used '--onlydeps' + '--nodeps' passes, but
+# --onlydeps only suppresses the *argument* node, while --deep enables
+# complete-graph mode, which re-adds deep dependencies of the args, @system and
+# @world sets. sys-apps/portage is in @system, so it came back as an ordinary
+# node and merged 5th of 8 anyway.
+#
+# --nodeps is the only flag that makes the merge list provably one package
+# long: it disables dependency resolution entirely, so neither set expansion
+# nor the complete-graph pass can add a second package, and emerge exits right
+# after the portage merge. Running it first also means every later emerge below
+# executes under the new portage, never straddling the upgrade.
+RUN emerge -u1vN --quiet-build --nodeps sys-apps/portage
+
+# Bring the new portage's own dependencies up to date, then everything else.
+# Safe to use --deep here: portage is already current, so a complete-graph pass
+# that re-adds it resolves to a no-op.
+RUN emerge -u1vDN --quiet-build --onlydeps sys-apps/portage && \
     emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
     perl-cleaner --all -- --quiet-build && \
     emerge -uvDN --with-bdeps=y --backtrack=50 --quiet-build @world && \
