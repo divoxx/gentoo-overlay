@@ -6,33 +6,21 @@ RUN echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf && \
     echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
     emerge --sync
 
-# sys-apps/portage is upgraded first, alone, and with --nodeps.
-#
-# portage-3.0.82 dropped the Python 2 unicode conversion layer, which removed
-# the encoding= keyword from portage.util.movefile.movefile(). An emerge
-# process that starts on the old portage and self-upgrades part-way through its
-# merge list then forks _MergeProcess children mixing old and new modules:
-#   TypeError: movefile() got an unexpected keyword argument 'encoding'
-# Every merge queued behind portage in that same process dies.
-#
-# An earlier attempt (6d6df14) used '--onlydeps' + '--nodeps' passes, but
-# --onlydeps only suppresses the *argument* node, while --deep enables
-# complete-graph mode, which re-adds deep dependencies of the args, @system and
-# @world sets. sys-apps/portage is in @system, so it came back as an ordinary
-# node and merged 5th of 8 anyway.
-#
-# --nodeps is the only flag that makes the merge list provably one package
-# long: it disables dependency resolution entirely, so neither set expansion
-# nor the complete-graph pass can add a second package, and emerge exits right
-# after the portage merge. Running it first also means every later emerge below
-# executes under the new portage, never straddling the upgrade.
-RUN emerge -u1vN --quiet-build --nodeps sys-apps/portage
+# sys-apps/portage is upgraded first and alone, only if an update is pending,
+# per Gentoo's own recommendation (wiki.gentoo.org/wiki/Portage): run
+# `emerge --oneshot sys-apps/portage` before anything else. Omitting --deep
+# keeps resolution shallow to portage's own direct deps (merged ahead of it,
+# under the still-old portage) instead of pulling in unrelated @system/@world
+# members alongside it, so portage is always last in its own merge list and
+# never shares a process with a merge that runs after it self-upgrades.
+RUN if emerge --pretend --update sys-apps/portage | grep -q '^\[ebuild'; then \
+        emerge --oneshot --update --quiet-build sys-apps/portage; \
+    else \
+        echo "sys-apps/portage is already up to date, skipping"; \
+    fi
 
-# Bring the new portage's own dependencies up to date, then everything else.
-# Safe to use --deep here: portage is already current, so a complete-graph pass
-# that re-adds it resolves to a no-op.
-RUN emerge -u1vDN --quiet-build --onlydeps sys-apps/portage && \
-    emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
+# Everything else, now guaranteed to run under a current portage.
+RUN emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
     perl-cleaner --all -- --quiet-build && \
     emerge -uvDN --with-bdeps=y --backtrack=50 --quiet-build @world && \
     emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin app-misc/jq net-libs/nodejs && \
