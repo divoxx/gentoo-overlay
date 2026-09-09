@@ -6,8 +6,7 @@
 EAPI=8
 
 CRATES="
-	addr2line@0.25.1
-	adler2@2.0.1
+	ahash@0.8.12
 	aho-corasick@1.1.4
 	alloca@0.4.0
 	allocator-api2@0.2.21
@@ -15,7 +14,6 @@ CRATES="
 	anes@0.1.6
 	ansi-escape-sequences@0.1.0
 	ansi-str@0.9.0
-	ansi-to-html@0.2.3
 	ansi-to-tui@8.0.1
 	ansitok@0.3.0
 	anstream@1.0.0
@@ -23,7 +21,7 @@ CRATES="
 	anstyle-query@1.1.5
 	anstyle-wincon@3.0.11
 	anstyle@1.0.14
-	anyhow@1.0.103
+	anyhow@1.0.104
 	approx@0.5.1
 	arboard@3.6.1
 	arrayvec@0.7.6
@@ -34,19 +32,22 @@ CRATES="
 	assert_enum_variants@0.1.2
 	atomic@0.6.1
 	autocfg@1.5.0
-	backtrace@0.3.76
 	base64@0.22.1
 	bit-set@0.5.3
+	bit-set@0.8.0
 	bit-vec@0.6.3
+	bit-vec@0.8.0
 	bitflags@1.3.2
 	bitflags@2.13.0
 	block-buffer@0.10.4
 	block-buffer@0.12.0
 	bon-macros@3.9.3
 	bon@3.9.3
+	borrow-or-share@0.2.4
 	bstr@1.12.1
 	bumpalo@3.19.1
 	by_address@1.2.1
+	bytecount@0.6.9
 	bytemuck@1.25.0
 	bytes@1.12.0
 	cast@0.3.0
@@ -60,16 +61,14 @@ CRATES="
 	ciborium-io@0.2.2
 	ciborium-ll@0.2.2
 	ciborium@0.2.2
-	clap@4.6.1
-	clap_builder@4.6.0
-	clap_complete@4.6.7
-	clap_derive@4.6.1
+	clap@4.6.3
+	clap_builder@4.6.2
+	clap_complete@4.6.9
+	clap_derive@4.6.3
 	clap_lex@1.0.0
 	clipboard-win@5.4.1
-	color-eyre@0.6.5
 	color-print-proc-macro@0.3.7
 	color-print@0.3.7
-	color-spantrace@0.3.0
 	colorchoice@1.0.4
 	compact_str@0.9.1
 	console@0.16.3
@@ -84,7 +83,7 @@ CRATES="
 	critical-section@1.2.0
 	crokey-proc_macros@1.3.0
 	crokey@1.3.0
-	crossbeam-channel@0.5.15
+	crossbeam-channel@0.5.16
 	crossbeam-deque@0.8.6
 	crossbeam-epoch@0.9.18
 	crossbeam-queue@0.3.12
@@ -103,6 +102,7 @@ CRATES="
 	darling_macro@0.20.11
 	darling_macro@0.23.0
 	dashmap@6.2.1
+	data-encoding@2.11.1
 	deltae@0.3.2
 	deranged@0.5.8
 	derive_builder@0.20.2
@@ -121,6 +121,7 @@ CRATES="
 	dyn-clone@1.0.20
 	east-asian-width@0.1.0
 	either@1.15.0
+	email_address@0.2.9
 	encode_unicode@1.0.0
 	equivalent@1.0.2
 	errno@0.3.14
@@ -129,6 +130,7 @@ CRATES="
 	euclid@0.22.14
 	eyre@0.6.12
 	fancy-regex@0.11.0
+	fancy-regex@0.19.0
 	fast-srgb8@1.0.0
 	fastrand@2.3.0
 	filedescriptor@0.8.3
@@ -136,10 +138,12 @@ CRATES="
 	finl_unicode@1.4.0
 	fixedbitset@0.4.2
 	fixedbitset@0.5.7
+	fluent-uri@0.4.1
 	fnv@1.0.7
 	foldhash@0.1.5
 	foldhash@0.2.0
-	frizbee@0.9.0
+	fraction@0.17.0
+	frizbee@0.13.0
 	fs2@0.4.3
 	futures-channel@0.3.32
 	futures-core@0.3.32
@@ -156,7 +160,6 @@ CRATES="
 	getrandom@0.2.17
 	getrandom@0.3.4
 	getrandom@0.4.3
-	gimli@0.32.3
 	glob@0.3.3
 	globset@0.4.18
 	half@2.7.1
@@ -173,9 +176,9 @@ CRATES="
 	iana-time-zone@0.1.64
 	ident_case@1.0.1
 	if_chain@1.0.3
-	ignore@0.4.27
+	ignore@0.4.33
 	indenter@0.3.4
-	indexmap@2.14.0
+	indexmap@2.14.1
 	indoc@2.0.7
 	insta-cmd@0.7.0
 	insta@1.48.0
@@ -188,6 +191,9 @@ CRATES="
 	itertools@0.14.0
 	itoa@1.0.17
 	js-sys@0.3.85
+	jsonschema-regex@0.53.0
+	jsonschema-value@0.53.0
+	jsonschema@0.53.0
 	kanal@0.1.1
 	kasuari@0.4.12
 	lab@0.11.0
@@ -202,7 +208,7 @@ CRATES="
 	linux-raw-sys@0.12.1
 	litrs@1.0.0
 	lock_api@0.4.14
-	log@0.4.33
+	log@0.4.34
 	lru@0.18.0
 	mac_address@1.1.8
 	matchers@0.2.0
@@ -210,11 +216,11 @@ CRATES="
 	memmem@0.1.1
 	memo-map@0.3.3
 	memoffset@0.9.1
+	micromap@0.3.0
 	mimalloc@0.1.48
-	minijinja@2.21.0
-	minimad@0.14.0
+	minijinja@2.24.0
+	minimad@0.16.0
 	minimal-lexical@0.2.1
-	miniz_oxide@0.8.9
 	mio@1.2.1
 	nix@0.28.0
 	nix@0.29.0
@@ -224,9 +230,16 @@ CRATES="
 	nom@8.0.0
 	normalize-path@0.2.1
 	nu-ansi-term@0.50.3
+	num-bigint@0.4.8
+	num-cmp@0.1.0
+	num-complex@0.4.6
 	num-conv@0.2.2
 	num-derive@0.4.2
+	num-integer@0.1.46
+	num-iter@0.1.46
+	num-rational@0.4.2
 	num-traits@0.2.19
+	num@0.4.3
 	num_threads@0.1.7
 	objc2-app-kit@0.3.2
 	objc2-core-foundation@0.3.2
@@ -235,16 +248,15 @@ CRATES="
 	objc2-foundation@0.3.2
 	objc2-io-surface@0.3.2
 	objc2@0.6.4
-	object@0.37.3
 	once_cell@1.21.4
 	once_cell_polyfill@1.70.2
 	oorandom@11.1.5
-	open@5.3.6
+	open@5.4.3
 	option-ext@0.2.0
 	ordered-float@4.6.0
 	os_pipe@1.2.3
 	osc8@0.1.0
-	owo-colors@4.3.0
+	outref@0.5.2
 	page_size@0.6.0
 	palette@0.7.6
 	palette_derive@0.7.6
@@ -258,8 +270,8 @@ CRATES="
 	pest_generator@2.8.5
 	pest_meta@2.8.5
 	petgraph@0.8.3
-	petname-macros@3.1.0
-	petname@3.1.0
+	petname-macros@3.2.0
+	petname@3.2.0
 	phf@0.11.3
 	phf_codegen@0.11.3
 	phf_generator@0.11.3
@@ -292,60 +304,61 @@ CRATES="
 	ratatui-termwiz@0.1.2
 	ratatui-widgets@0.3.2
 	ratatui@0.30.2
-	raw-cpuid@11.6.0
 	rayon-core@1.13.0
 	rayon@1.12.0
 	redox_syscall@0.5.18
 	redox_users@0.5.2
 	ref-cast-impl@1.0.25
 	ref-cast@1.0.25
+	referencing@0.53.0
 	reflink-copy@0.1.30
-	regex-automata@0.4.13
+	regex-automata@0.4.18
 	regex-syntax@0.8.11
-	regex@1.12.4
+	regex@1.13.1
 	relative-path@1.9.3
 	renamore@0.3.2
 	roff@1.1.1
 	rstest@0.26.1
 	rstest_macros@0.26.1
-	rustc-demangle@0.1.27
 	rustc-hash@2.1.1
 	rustc_version@0.4.1
 	rustix@1.1.4
-	rustversion@1.0.22
+	rustversion@1.0.23
 	ryu@1.0.23
 	same-file@1.0.6
 	sanitize-filename@0.6.0
-	schemars@1.2.1
-	schemars_derive@1.2.1
+	schemars@1.2.2
+	schemars_derive@1.2.2
 	scopeguard@1.2.0
 	semver@1.0.27
-	serde@1.0.228
-	serde_core@1.0.228
-	serde_derive@1.0.228
-	serde_derive_internals@0.29.1
-	serde_json@1.0.150
+	serde@1.0.229
+	serde_core@1.0.229
+	serde_derive@1.0.229
+	serde_derive_internals@0.30.0
+	serde_json@1.0.151
 	serde_spanned@1.0.4
 	serial2@0.2.33
 	sha2@0.10.9
 	sha2@0.11.0
 	sharded-slab@0.1.7
+	shared_child@1.1.2
 	shared_library@0.1.9
 	shell-escape@0.1.5
-	shell-quote@0.7.2
+	shell-quote@0.8.0
 	shell-words@1.1.1
 	shellexpand@3.1.2
 	shlex@1.3.0
 	shlex@2.0.1
+	sigchld@0.2.4
 	signal-hook-mio@0.2.5
 	signal-hook-registry@1.4.8
 	signal-hook@0.3.18
 	signal-hook@0.4.4
 	simdutf8@0.1.5
 	similar@2.7.0
-	similar@3.1.1
+	similar@3.2.0
 	siphasher@1.0.3
-	skim@5.0.0
+	skim@5.6.6
 	slab@0.4.11
 	smallvec@1.15.1
 	socket2@0.6.4
@@ -360,9 +373,10 @@ CRATES="
 	supports-hyperlinks@3.2.0
 	syn@1.0.109
 	syn@2.0.117
+	syn@3.0.1
 	synoptic@2.2.9
 	tempfile@3.27.0
-	termimad@0.34.1
+	termimad@0.35.3
 	termina@0.3.3
 	terminal_size@0.4.4
 	terminfo@0.9.0
@@ -374,14 +388,14 @@ CRATES="
 	thiserror@2.0.18
 	thread_local@1.1.9
 	time-core@0.1.9
-	time-macros@0.2.30
-	time@0.3.51
+	time-macros@0.2.32
+	time@0.3.55
 	tinytemplate@1.2.1
 	tinyvec@1.11.0
 	tinyvec_macros@0.1.1
 	tokio-macros@2.7.0
 	tokio-util@0.7.18
-	tokio@1.52.3
+	tokio@1.53.1
 	toml@1.0.7+spec-1.1.0
 	toml_datetime@0.7.5+spec-1.1.0
 	toml_datetime@1.1.0+spec-1.1.0
@@ -391,20 +405,20 @@ CRATES="
 	toml_writer@1.1.0+spec-1.1.0
 	tracing-attributes@0.1.31
 	tracing-core@0.1.36
-	tracing-error@0.2.1
 	tracing-log@0.2.0
 	tracing-subscriber@0.3.23
 	tracing@0.1.44
 	tree-sitter-bash@0.25.1
-	tree-sitter-highlight@0.26.10
+	tree-sitter-highlight@0.26.13
 	tree-sitter-language@0.1.6
-	tree-sitter@0.26.10
+	tree-sitter@0.26.13
 	tree_magic_mini@3.2.2
 	tui-term@0.3.4
 	typenum@1.19.0
 	ucd-trie@0.1.7
 	unicase@2.9.0
 	unicode-display-width@0.3.0
+	unicode-general-category@1.1.0
 	unicode-ident@1.0.22
 	unicode-normalization@0.1.25
 	unicode-segmentation@1.12.0
@@ -414,17 +428,18 @@ CRATES="
 	unicode-xid@0.2.6
 	urlencoding@2.1.3
 	utf8parse@0.2.2
+	uuid-simd@0.8.0
 	uuid@1.23.3
 	valuable@0.1.1
-	vergen-gitcl@10.0.1
-	vergen-lib@10.0.1
-	vergen@10.0.1
+	vergen-gitcl@10.0.3
+	vergen-lib@10.0.3
+	vergen@10.0.3
 	version_check@0.9.5
+	vsimd@0.8.0
 	vt100@0.16.2
 	vte@0.14.1
 	vte@0.15.0
 	vtparse@0.6.2
-	wait-timeout@0.2.1
 	walkdir@2.5.0
 	wasi@0.11.1+wasi-snapshot-preview1
 	wasip2@1.0.2+wasi-0.2.9
@@ -445,7 +460,7 @@ CRATES="
 	wezterm-dynamic-derive@0.1.1
 	wezterm-dynamic@0.2.1
 	wezterm-input-types@0.1.0
-	which@8.0.4
+	which@8.0.6
 	winapi-i686-pc-windows-gnu@0.4.0
 	winapi-util@0.1.11
 	winapi-x86_64-pc-windows-gnu@0.4.0
@@ -482,10 +497,10 @@ CRATES="
 	x11rb@0.13.2
 	zerocopy-derive@0.8.33
 	zerocopy@0.8.33
-	zmij@1.0.16
+	zmij@1.0.23
 "
 
-RUST_MIN_VER="1.95"
+RUST_MIN_VER="1.97"
 
 inherit cargo
 
@@ -498,7 +513,7 @@ SRC_URI="
 
 LICENSE="MIT"
 # Dependent crate licenses
-LICENSE+=" Apache-2.0 BSD ISC MIT Unicode-3.0 Unlicense ZLIB"
+LICENSE+=" Apache-2.0 BSD ISC MIT MIT-0 Unicode-3.0 Unlicense ZLIB"
 SLOT="0"
 KEYWORDS="~amd64"
 
