@@ -4,6 +4,7 @@ FROM ${BASE_IMAGE}
 RUN echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf && \
     echo 'FEATURES="-pid-sandbox -ipc-sandbox -network-sandbox"' >> /etc/portage/make.conf && \
     echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
+    echo "dev-cpp/simdutf atomic-base64" >> /etc/portage/package.use/nodejs && \
     emerge --sync
 
 # sys-apps/portage is upgraded first and alone, only if an update is pending,
