@@ -97,14 +97,16 @@ Run `ebuild <path-to-new-ebuild> clean fetch unpack prepare configure compile` t
 
 ### 9. Write Changelog
 
-Fetch the release notes for the new version and write them to `/tmp/pr-changelog.txt`.
+Fetch the release notes for the new version.
 
 - **GitHub**: Use the release body from `https://api.github.com/repos/{owner}/{repo}/releases/tags/v{version}` (also try without the `v` prefix if the first returns 404). Use the `body` field. If there is no GitHub release (only a tag), skip this step.
 - **PyPI / crates.io / other**: skip — no standard release notes format.
 
-Format the file as markdown. Include only the release notes for the new version being bumped — not the full history. If the release body is empty or contains only boilerplate, skip writing the file.
+Summarize the release notes for the new version only (not the full history) into a short, plain-language list of changes that matter to someone deciding whether to upgrade this package: new features, behavior changes, bug fixes, and breaking changes. Drop entries that are purely internal to upstream's development (CI, dependency bumps, refactors, test changes, documentation-only edits) unless they change how the package behaves or is configured.
 
-Do not write the file if there are no useful release notes to include.
+Write every entry in your own words. Do not copy upstream phrasing verbatim, and do not carry over `@mentions`, issue/PR numbers or links, or commit hashes — this PR lives in this overlay's repo, not upstream's, and reproducing upstream's contributor credits or cross-references here has caused GitHub to notify people with no connection to this repository.
+
+Write the result as markdown to `/tmp/pr-changelog.txt`. If the release body is empty, boilerplate, or has nothing left worth surfacing after the filtering above, skip writing the file.
 
 ### 10. Report Results
 
