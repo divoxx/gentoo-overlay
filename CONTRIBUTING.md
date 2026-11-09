@@ -37,19 +37,27 @@ emerge -av dev-util/pkgdev dev-util/pkgcheck
 4. **Generate the Manifest** — `pkgdev manifest` in the package directory.
 5. **QA check** — `pkgcheck scan <category/name>`. Fix all errors.
 6. **Build test** — `ebuild <path>.ebuild clean fetch unpack prepare configure compile`.
-7. **Submit a PR** — the verify CI runs automatically.
+7. **List it in the README** — Add a row for `<category>/<name>` to the Packages table in `README.md`, in alphabetical order, with a one-line description based on the ebuild's `DESCRIPTION`.
+8. **Submit a PR** — the verify CI runs automatically.
 
-If you use Claude Code, the `/ebuild-create <url>` skill automates steps 2–6.
+If you use Claude Code, the `/ebuild-create <url>` skill automates steps 2–7.
 
 ## Updating an Existing Package
 
 1. Copy the latest ebuild to the new version filename (`<name>-<newver>.ebuild`).
 2. Review for any version-specific changes (hardcoded versions, `CRATES=` lists, `EGO_SUM` arrays for Go packages).
 3. Run `pkgdev manifest`, `pkgcheck scan`, and a build test.
-4. Do not remove the old version — CI prunes beyond 5 automatically.
-5. Submit a PR.
+4. If the new version changes `DESCRIPTION`, or the package is missing from the Packages table in `README.md`, update its row there. A plain version bump needs no README change.
+5. Do not remove the old version — CI prunes beyond 5 automatically.
+6. Submit a PR.
 
-If you use Claude Code, the `/ebuild-update <category/name>` skill automates steps 1–3.
+If you use Claude Code, the `/ebuild-update <category/name>` skill automates steps 1–4.
+
+## Removing a Package
+
+1. Delete the package directory (`<category>/<name>/`).
+2. Remove the package's row from the Packages table in `README.md`.
+3. Submit a PR.
 
 ## Language-Specific Notes
 
@@ -146,6 +154,7 @@ A PR must pass the following before merging:
 - [ ] Copyright header present on all ebuilds
 - [ ] `metadata.xml` includes maintainer and upstream `<remote-id>`
 - [ ] Manifest is current (regenerated with `pkgdev manifest`)
+- [ ] `README.md` Packages table matches the change — rows added, removed, or updated so every package is listed with a current description
 
 ## Commit Messages
 
