@@ -91,6 +91,7 @@ When asked to create an ebuild for a package:
 8. **Generate the Manifest** — Run `pkgdev manifest` in the package directory.
 9. **Run QA checks** — Run `pkgcheck scan <category/package>` and fix any issues.
 10. **Build verification** — Run `ebuild <path-to-ebuild> clean fetch unpack prepare configure compile` to confirm the package builds successfully without installing it. Fix any build failures before reporting completion.
+11. **Update the README** — If the overlay root has a `README.md` that lists packages (such as a Packages table), add an entry for the new package in alphabetical order, with a one-line description based on the ebuild's `DESCRIPTION`.
 
 ## EAPI 8 Reference
 
@@ -393,3 +394,4 @@ Before finalizing an ebuild, verify:
 - [ ] **RESTRICT="!test? ( test )"** if IUSE contains `test`
 - [ ] **Run `pkgcheck scan <category/package>`** and fix any reported issues
 - [ ] **Build verification**: `ebuild <path>.ebuild clean fetch unpack prepare configure compile` succeeds
+- [ ] **README**: if the overlay's `README.md` lists packages, it includes the new package with a one-line description

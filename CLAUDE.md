@@ -45,7 +45,7 @@ For accumulated session learnings, see [BEST_PRACTICES.md](BEST_PRACTICES.md).
 Follow all engineering standards, tooling conventions, and the PR process documented in [CONTRIBUTING.md](CONTRIBUTING.md). It is the authoritative source for:
 
 - Development tooling and the standard ebuild workflow
-- Adding and updating packages
+- Adding, updating, and removing packages, including keeping the `README.md` Packages table current
 - Engineering standards (EAPI, keywords, formatting, variable ordering, etc.)
 - Quality gates, commit messages, and CI/CD overview
 
@@ -59,3 +59,5 @@ Always delegate to the appropriate agent for ebuild work. Do not write or modify
 | Bump an existing ebuild to a new version | `ebuild-updater` | `/ebuild-update <category/name>` |
 | Verify an ebuild (QA + build test) | `scripts/verify-ebuild.sh` | `bash scripts/verify-ebuild.sh <category/name>` |
 | Debug a CI workflow failure | `ci-debugger` | (invoked automatically by `debug-ci-failure.yml`) |
+
+After `ebuild-writer` or `ebuild-updater` finishes, confirm the change includes any needed `README.md` Packages table update before reporting the work as done. Package removal has no agent — follow CONTRIBUTING.md → "Removing a Package", which includes removing the README row.

@@ -82,7 +82,15 @@ Based on the upstream type:
 
 Run `pkgdev manifest` in the package directory to regenerate the Manifest file with checksums for the new distfile.
 
-### 7. Run QA Checks
+### 7. Update the README
+
+If the overlay root has a `README.md` that lists packages (such as a Packages table), keep this package's entry current:
+
+- If the package has no entry, add one in alphabetical order, with a one-line description based on the new ebuild's `DESCRIPTION`.
+- If the new ebuild's `DESCRIPTION` differs from the previous version's, update the entry's description to match.
+- Otherwise, leave `README.md` untouched — a plain version bump needs no README change.
+
+### 8. Run QA Checks
 
 Run `pkgcheck scan <category>/<name>` and fix any issues reported. Common checks:
 
@@ -91,11 +99,11 @@ Run `pkgcheck scan <category>/<name>` and fix any issues reported. Common checks
 - Missing metadata
 - Unused USE flags
 
-### 8. Build Verification
+### 9. Build Verification
 
 Run `ebuild <path-to-new-ebuild> clean fetch unpack prepare configure compile` to confirm the new version builds successfully without installing it. Fix any build failures before reporting completion.
 
-### 9. Write Changelog
+### 10. Write Changelog
 
 Fetch the release notes for the new version.
 
@@ -108,7 +116,7 @@ Write every entry in your own words. Do not copy upstream phrasing verbatim, and
 
 Write the result as markdown to `/tmp/pr-changelog.txt`. If the release body is empty, boilerplate, or has nothing left worth surfacing after the filtering above, skip writing the file.
 
-### 10. Report Results
+### 11. Report Results
 
 Provide a summary:
 
@@ -116,6 +124,7 @@ Provide a summary:
 - New version created
 - Any manual steps needed (e.g., updating CRATES list, Go deps tarball, testing the build)
 - QA check results
+- Whether `README.md` was updated, and why
 
 ## Version Parsing
 
