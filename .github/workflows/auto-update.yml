@@ -117,8 +117,9 @@ jobs:
           NAME="${PACKAGE##*/}"
           BRANCH="auto-update/${CATEGORY}-${NAME}"
 
-          # Stage all changes in the package directory
-          git add "${CATEGORY}/${NAME}/"
+          # Stage the package directory, plus README.md in case the updater
+          # changed this package's row in the Packages table
+          git add "${CATEGORY}/${NAME}/" README.md
 
           # Build GitHub API tree entries for each staged file.
           # Commits created via the API are auto-signed by GitHub (shows as Verified).
