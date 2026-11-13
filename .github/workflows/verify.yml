@@ -94,6 +94,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check committed Manifest is current
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          (cd "$PACKAGE" && pkgdev manifest)
+          # Without --force, pkgdev only rewrites a Manifest whose distfile list
+          # doesn't match the ebuilds, so any change here means the committed
+          # Manifest is missing or out of date.
+          CHANGES=$(git status --porcelain --untracked-files=all -- "$PACKAGE/Manifest")
+          if [ -n "$CHANGES" ]; then
+            echo "::error::$PACKAGE/Manifest is missing or out of date. Run 'pkgdev manifest' in $PACKAGE and commit the result."
+            echo "$CHANGES"
+            git --no-pager diff --stat -- "$PACKAGE/Manifest"
+            exit 1
+          fi
+          echo "Manifest: committed and current"
+
       - name: Verify ebuild
         env:
           PACKAGE: ${{ matrix.package }}
