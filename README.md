@@ -15,6 +15,7 @@ A personal Gentoo package overlay by [Rodrigo Kochenburger](https://github.com/d
 | `dev-util/exercism` | CLI client for exercism.io — learning programming through practice |
 | `dev-util/ufbt` | Micro Flipper Build Tool — SDK for Flipper Zero app development |
 | `dev-util/worktrunk` | CLI for git worktree management, designed for running AI agents in parallel |
+| `gui-apps/wlrctl` | Command line utility for miscellaneous wlroots Wayland extensions |
 | `media-sound/spotify-player` | Spotify player in the terminal with full feature parity |
 | `net-mail/himalaya` | CLI email client |
 | `sys-cluster/minikube` | Local Kubernetes clusters for learning and development |
