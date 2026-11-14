@@ -205,7 +205,7 @@ git pull origin/main   # conflict resolution stays in one explicit merge commit
 
 ### `verify.yml` — Runs on every push to non-main branches
 
-Detects changed ebuilds, then for each: regenerates Manifest, runs `pkgcheck scan`, builds through `compile`. Blocks merge on failure. Promotes auto-update draft PRs to ready when all checks pass.
+Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), runs `pkgcheck scan`, builds through `compile`. Blocks merge on failure. Promotes auto-update draft PRs to ready when all checks pass.
 
 ### `auto-update.yml` — Runs daily at 06:00 UTC
 

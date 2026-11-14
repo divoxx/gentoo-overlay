@@ -80,12 +80,18 @@ jobs:
 
       - name: Check for changes
         id: changes
+        env:
+          PACKAGE: ${{ matrix.package }}
         run: |
           set -euo pipefail
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "updated=false" >> "$GITHUB_OUTPUT"
-          else
+          # Untracked files count as changes: a bump adds a new ebuild, and a
+          # package without a committed Manifest gets a brand-new one. Only the
+          # paths the commit step stages are checked.
+          CHANGES=$(git status --porcelain --untracked-files=all -- "$PACKAGE" README.md)
+          if [ -n "$CHANGES" ]; then
             echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prune old versions (keep 5 most recent)
