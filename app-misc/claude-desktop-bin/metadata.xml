@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<longdescription>
+		Claude Desktop is Anthropic's Electron-based desktop app for Claude,
+		with Chat, Cowork and Claude Code sessions. This package installs the
+		official Debian build from Anthropic's APT repository.
+	</longdescription>
+	<upstream>
+		<doc>https://code.claude.com/docs/en/desktop-linux</doc>
+	</upstream>
+	<use>
+		<flag name="cowork">Pull in <pkg>app-emulation/qemu</pkg>, <pkg>app-emulation/virtiofsd</pkg> and OVMF firmware for the Cowork virtual machine, and link the firmware into /usr/share/OVMF</flag>
+	</use>
+</pkgmetadata>
