@@ -67,4 +67,4 @@ Fix any reported errors before pushing.
 
 ## RFC Process
 
-Significant changes (new packages, architectural changes, breaking changes) go through the RFC process. See [docs/rfc-process.md](docs/rfc-process.md).
+Significant changes (new packages, architectural changes, breaking changes) go through the RFC process. RFCs live in `docs/rfcs/`; see the [bytewyrd RFC process](https://github.com/bytewyrd/claude-bytewyrd/blob/main/skills/rfc-process/references/rfc-process.md).
