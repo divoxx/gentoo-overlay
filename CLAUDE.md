@@ -40,7 +40,7 @@ Personal Gentoo overlay
 
 ## Standards and Workflow
 
-For accumulated session learnings, see [BEST_PRACTICES.md](BEST_PRACTICES.md).
+For accumulated session learnings, see [docs/BEST_PRACTICES.md](docs/BEST_PRACTICES.md).
 
 Follow all engineering standards, tooling conventions, and the PR process documented in [CONTRIBUTING.md](CONTRIBUTING.md). It is the authoritative source for:
 
