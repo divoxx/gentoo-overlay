@@ -161,3 +161,28 @@ jobs:
           else
             echo "PR #$PR_NUMBER is already ready for review — skipping"
           fi
+
+  # The status check that the main ruleset requires. verify's checks are named
+  # per package, so a ruleset can't require them by name; this job reports one
+  # result for every run.
+  verify-result:
+    needs: [detect-changes, verify]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check detect-changes and verify results
+        env:
+          DETECT: ${{ needs.detect-changes.result }}
+          VERIFY: ${{ needs.verify.result }}
+        run: |
+          set -euo pipefail
+          echo "detect-changes: $DETECT, verify: $VERIFY"
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::detect-changes finished as $DETECT"
+            exit 1
+          fi
+          # verify is skipped when no ebuild changed or a newer run supersedes this one
+          if [ "$VERIFY" != "success" ] && [ "$VERIFY" != "skipped" ]; then
+            echo "::error::verify finished as $VERIFY"
+            exit 1
+          fi

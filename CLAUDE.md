@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # Gentoo Overlay
 
 Personal Gentoo overlay
@@ -29,7 +31,7 @@ Personal Gentoo overlay
 │   └── repo_name                # Overlay name
 ├── docs/plans/                  # Point-in-time design documents (historical, not authoritative)
 ├── .github/workflows/
-│   ├── auto-update.yml          # Daily upstream version check and bump
+│   ├── auto-update.yml          # Twice-weekly upstream version check and bump (Sun/Wed 06:20 UTC)
 │   ├── build-image.yml          # Weekly CI container image build
 │   ├── debug-ci-failure.yml     # Auto-debug and fix CI failures via Claude agent
 │   └── verify.yml               # pkgcheck QA + build verification on every PR branch
@@ -40,7 +42,7 @@ Personal Gentoo overlay
 
 ## Standards and Workflow
 
-For accumulated session learnings, see [BEST_PRACTICES.md](BEST_PRACTICES.md).
+For accumulated session learnings, see [docs/BEST_PRACTICES.md](docs/BEST_PRACTICES.md).
 
 Follow all engineering standards, tooling conventions, and the PR process documented in [CONTRIBUTING.md](CONTRIBUTING.md). It is the authoritative source for:
 
