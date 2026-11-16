@@ -2,7 +2,7 @@ name: Build CI Image
 
 on:
   schedule:
-    - cron: '0 3 * * 0'   # Sundays 03:00 UTC (before auto-update at 06:00)
+    - cron: '0 3 * * 0'   # Sundays 03:00 UTC (before auto-update at 06:20)
   push:
     branches:
       - main
