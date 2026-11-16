@@ -62,8 +62,7 @@ Fix any reported errors before pushing.
 
 1. Open a PR against `main`
 2. CI must pass (pkgcheck QA + build verification)
-3. One approval required for merge
-4. Squash merge to keep history clean
+3. Merge with a merge commit; never squash or rebase
 
 ## RFC Process
 
