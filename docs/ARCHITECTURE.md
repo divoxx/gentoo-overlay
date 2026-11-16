@@ -9,7 +9,7 @@ Update this file when:
   - A new external dependency or service is introduced
 
 Not here: setup/quickstart                   → README.md
-          dev workflow, commit conventions   → docs/CONTRIBUTING.md
+          dev workflow, commit conventions   → CONTRIBUTING.md
           non-obvious session learnings      → docs/BEST_PRACTICES.md
 -->
 

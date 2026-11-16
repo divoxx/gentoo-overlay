@@ -1,3 +1,15 @@
+<!--
+CONTRIBUTING scope: everything a developer needs to work on this project.
+Update this file when:
+  - Prerequisites or tool versions change
+  - Setup steps change
+  - Dev workflow or branching conventions change
+  - Quality gate commands change
+  - PR or RFC process changes
+
+Not here: what the project does or its architecture → README.md / docs/ARCHITECTURE.md
+-->
+
 # Contributing
 
 This is a personal Gentoo overlay. Contributions are welcome for packages that are:
@@ -8,11 +20,28 @@ This is a personal Gentoo overlay. Contributions are welcome for packages that a
 
 ## Prerequisites
 
-Install the required Gentoo tooling:
+You need [git](https://git-scm.com/) and a Gentoo system or container with Portage installed. Then install the required Gentoo tooling:
 
 ```bash
 emerge -av dev-util/pkgdev dev-util/pkgcheck
 ```
+
+## Development Setup
+
+```bash
+git clone https://github.com/divoxx/gentoo-overlay.git
+cd gentoo-overlay
+```
+
+All work happens on feature branches. Use the [git worktree](https://git-scm.com/docs/git-worktree) workflow for parallel tasks:
+
+```bash
+git worktree add .worktrees/<branch-name> -b <branch-name>
+cd .worktrees/<branch-name>
+# work here
+```
+
+See `CLAUDE.md` for agent delegation guidance.
 
 ## Development Tooling
 
@@ -156,23 +185,28 @@ A PR must pass the following before merging:
 - [ ] Manifest is current (regenerated with `pkgdev manifest`)
 - [ ] `README.md` Packages table matches the change — rows added, removed, or updated so every package is listed with a current description
 
+To run the QA scan and build test locally, use `bash scripts/verify-ebuild.sh <category/name>`; CI runs the same script. Fix any reported errors before pushing.
+
 ## Commit Messages
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) with a package scope:
+Use [Conventional Commits](https://www.conventionalcommits.org/) with a scope. Package changes use the package as the scope; other changes use the area they touch:
 
 ```
 feat(dev-python/foo): add foo-1.2.3
 feat(dev-python/foo): bump to 1.3.0
 fix(dev-util/bar): fix build with gcc-14
 chore(dev-python/foo): remove obsolete 1.1.0
-ci: ...
+ci(verify): ...
+docs(contributing): ...
 ```
+
+Types: `feat` adds a capability or package version, `fix` corrects wrong behavior, `refactor` restructures without changing behavior, `docs` changes documentation, `chore` covers tooling, dependencies and config, and `ci` covers the workflows.
 
 ## PR Process
 
 1. Create a branch: `feat/<category>-<name>` or `fix/<description>`.
-2. Push and open a PR. The verify workflow runs automatically.
-3. Fix any CI failures before requesting review.
+2. Push and open a PR against `main`. The verify workflow runs automatically.
+3. CI must pass before merging. Fix any CI failures before requesting review.
 
 Auto-update PRs (opened by the daily CI bot) are promoted from draft to ready automatically when all checks pass.
 
@@ -200,6 +234,10 @@ If `git rebase -i origin/main` hits conflicts and you'd rather not resolve them 
 git rebase --abort
 git pull origin/main   # conflict resolution stays in one explicit merge commit
 ```
+
+## RFC Process
+
+Changes that need design, such as architectural or breaking changes, start as an RFC in `docs/rfcs/`. See the [bytewyrd RFC process](https://github.com/bytewyrd/claude-bytewyrd/blob/main/skills/rfc-process/references/rfc-process.md). Adding, updating or removing a package doesn't need one; follow the package sections above.
 
 ## CI/CD Overview
 
