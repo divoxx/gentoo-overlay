@@ -2,14 +2,6 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "extraKnownMarketplaces": {
-    "bytewyrd": {
-      "source": {
-        "source": "github",
-        "repo": "bytewyrd/claude-bytewyrd"
-      }
-    }
-  },
   "sandbox": {
     "enabled": true,
     "excludedCommands": [
@@ -20,7 +12,6 @@
     ]
   },
   "enabledPlugins": {
-    "bytewyrd@bytewyrd": true,
     "github@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "code-review@claude-plugins-official": true
