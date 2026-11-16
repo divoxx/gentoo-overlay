@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # Gentoo Overlay
 
 Personal Gentoo overlay
