@@ -179,13 +179,13 @@ Every USE flag **must** have a `<flag name="...">` entry in `metadata.xml`. Keep
 A PR must pass the following before merging:
 
 - [ ] `pkgcheck scan` reports no errors (warnings acceptable if unfixable upstream)
-- [ ] Ebuild builds through the `compile` phase without errors
+- [ ] Ebuild builds through the `install` phase without errors
 - [ ] Copyright header present on all ebuilds
 - [ ] `metadata.xml` includes maintainer and upstream `<remote-id>`
 - [ ] Manifest is current (regenerated with `pkgdev manifest`)
 - [ ] `README.md` Packages table matches the change — rows added, removed, or updated so every package is listed with a current description
 
-To run the QA scan and build test locally, use `bash scripts/verify-ebuild.sh <category/name>`; CI runs the same script. Fix any reported errors before pushing.
+To run the QA scan and build test locally, use `bash scripts/verify-ebuild.sh <category/name>`. CI runs the same script in `verify.yml`, and the `main` ruleset requires that workflow's `verify-result` check to pass. Fix any reported errors before pushing.
 
 ## Commit Messages
 
@@ -206,9 +206,9 @@ Types: `feat` adds a capability or package version, `fix` corrects wrong behavio
 
 1. Create a branch: `feat/<category>-<name>` or `fix/<description>`.
 2. Push and open a PR against `main`. The verify workflow runs automatically.
-3. CI must pass before merging. Fix any CI failures before requesting review.
+3. CI must pass before merging: the `main` ruleset requires the `verify-result` check. Fix any CI failures before requesting review.
 
-Auto-update PRs (opened by the daily CI bot) are promoted from draft to ready automatically when all checks pass.
+Auto-update PRs (opened by the auto-update workflow) are promoted from draft to ready automatically when all checks pass.
 
 ### Merge Strategy
 
@@ -241,10 +241,10 @@ Changes that need design, such as architectural or breaking changes, start as an
 
 ## CI/CD Overview
 
-### `verify.yml` — Runs on every push to non-main branches
+### `verify.yml` — Runs on pull requests and pushes to `main`
 
-Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), runs `pkgcheck scan`, builds through `compile`. Blocks merge on failure. Promotes auto-update draft PRs to ready when all checks pass.
+Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), then runs `scripts/verify-ebuild.sh`, which runs `pkgcheck scan`, installs the build dependencies and builds through `install` into the staging directory. The `verify-result` job reports the outcome of the whole run, and the `main` ruleset requires it to pass, so a failure blocks merge. Promotes auto-update draft PRs to ready when all checks pass.
 
-### `auto-update.yml` — Runs daily at 06:00 UTC
+### `auto-update.yml` — Runs Sundays and Wednesdays at 06:20 UTC
 
 Checks all packages for upstream updates. Creates version-bump ebuilds, pushes `auto-update/<category>-<name>` branches, opens draft PRs, and prunes packages to at most 5 versions.
