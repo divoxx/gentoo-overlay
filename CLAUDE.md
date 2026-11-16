@@ -31,7 +31,7 @@ Personal Gentoo overlay
 │   └── repo_name                # Overlay name
 ├── docs/plans/                  # Point-in-time design documents (historical, not authoritative)
 ├── .github/workflows/
-│   ├── auto-update.yml          # Daily upstream version check and bump
+│   ├── auto-update.yml          # Twice-weekly upstream version check and bump (Sun/Wed 06:20 UTC)
 │   ├── build-image.yml          # Weekly CI container image build
 │   ├── debug-ci-failure.yml     # Auto-debug and fix CI failures via Claude agent
 │   └── verify.yml               # pkgcheck QA + build verification on every PR branch

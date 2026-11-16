@@ -9,7 +9,7 @@ Update this file when:
   - A new external dependency or service is introduced
 
 Not here: setup/quickstart                   → README.md
-          dev workflow, commit conventions   → docs/CONTRIBUTING.md
+          dev workflow, commit conventions   → CONTRIBUTING.md
           non-obvious session learnings      → docs/BEST_PRACTICES.md
 -->
 
@@ -74,6 +74,7 @@ Runs before `auto-update.yml` (03:00 vs 06:20) so the update jobs always get a f
 3. Matrix: one job per changed `category/package`, running in `gentoo-ci` container
 4. Run `scripts/verify-ebuild.sh` for each package
 5. **Promote step** (auto-update branches only): if all verify jobs pass, promote the draft PR to "ready for review"
+6. **Result job** (`verify-result`, every run): fails unless detect-changes succeeded and every verify job passed or was skipped. It is the status check the `main` ruleset requires, since verify's own checks are named per package
 
 #### `debug-ci-failure.yml` — Automated CI Debugging
 
