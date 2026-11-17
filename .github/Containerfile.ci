@@ -9,12 +9,16 @@ FROM docker.io/gentoo/stage3:amd64-systemd
 # signature on every binary package, whatever binrepos.conf says: a matching
 # package that fails the check fails the install instead of building from
 # source. Portage runs getuto to set up the keyring that checks them.
+#
+# stage3 ships without the Gentoo tree. emerge-webrsync installs the latest
+# daily snapshot as a single download, verified against the Gentoo release
+# key, instead of rsyncing every file of the tree.
 RUN echo 'FEATURES="-pid-sandbox -ipc-sandbox -network-sandbox getbinpkg binpkg-request-signature"' >> /etc/portage/make.conf && \
     mkdir -p /etc/portage/package.accept_keywords && \
     echo '*/*::divoxx-overlay ~amd64' > /etc/portage/package.accept_keywords/divoxx-overlay && \
     echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
     echo "dev-cpp/simdutf atomic-base64" >> /etc/portage/package.use/nodejs && \
-    emerge --sync
+    emerge-webrsync
 
 # sys-apps/portage is upgraded first and alone, only if an update is pending,
 # per Gentoo's own recommendation (wiki.gentoo.org/wiki/Portage): run

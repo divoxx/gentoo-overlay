@@ -37,7 +37,7 @@ A personal Gentoo package overlay providing 7 packages across 4 categories. The 
 **Purpose:** Pre-synced Portage environment with all tools needed to verify and update ebuilds.
 **Location:** `.github/Containerfile.ci`
 **Built from:** `gentoo/stage3:amd64-systemd`, on every build
-**Contains:** Portage tree (synced at build time), `pkgdev`, `pkgcheck`, `gh`, `git`, `go`, `rust-bin`, `jq`, `nodejs` and the Claude Code CLI
+**Contains:** Portage tree (the latest daily snapshot at build time, installed with `emerge-webrsync`), `pkgdev`, `pkgcheck`, `gh`, `git`, `go`, `rust-bin`, `jq`, `nodejs` and the Claude Code CLI
 
 Every build starts from stage3 rather than from the previously published image, so nothing accumulates between builds. Dependencies from `::gentoo` use stable keywords, and this overlay's packages `~amd64`, because the [official Gentoo binary package host](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart) is built from the stable tree. With `FEATURES="getbinpkg binpkg-request-signature"`, both the image build and verify's dependency installs use a binary package whenever one matches the requested version, USE flags and dependencies, and compile from source when none does. Every binary package needs a valid signature: one that fails the check fails the install instead of falling back to source. The build ends by removing package versions nothing depends on (`emerge --depclean`), downloaded source tarballs and binary packages, and the binary package keyring; `getuto` creates a new keyring in each job that installs binary packages.
 
@@ -148,7 +148,7 @@ The GitHub App token is generated fresh per workflow run via `tibdex/github-app-
 | Bot identity | GitHub App (`divoxx-bot`) | Scoped write permissions; fresh token per run; commits attributed to bot, not maintainer |
 | PR lifecycle | Draft on creation, promote on verify pass | Prevents auto-update PRs from landing without CI passing; merge is always a human action |
 | Version pruning | Keep 5 most recent ebuilds | Prevents unbounded accumulation; old ebuilds are rarely needed once superseded |
-| Portage sync in CI | Synced at image build time, re-synced at update time | Image build is weekly; update jobs re-sync to catch releases between image builds |
+| Portage sync in CI | Daily snapshot (`emerge-webrsync`) at image build time, re-synced at update time | A fresh stage3 has no tree, and one signed snapshot is a single download instead of an rsync of every file; update jobs re-sync to catch releases between image builds |
 | CI failure handling | Auto-debug via Claude Code agent | Reduces maintainer toil; most verify failures from version bumps have predictable fixes |
 | Idempotency guard | Last-commit-is-bot-fix check | Prevents infinite debug→fix→fail→debug loops on auto-update branches |
 | Superseding run detection | Skip if newer run queued for same branch | Avoids redundant verify runs on rapid pushes; saves CI minutes |
