@@ -37,7 +37,7 @@ A personal Gentoo package overlay providing 7 packages across 4 categories. The 
 **Purpose:** Pre-synced Portage environment with all tools needed to verify and update ebuilds.
 **Location:** `.github/Containerfile.ci`
 **Built from:** `gentoo/stage3:amd64-systemd`, on every build
-**Contains:** Portage tree (the latest daily snapshot at build time, installed with `emerge-webrsync`), `pkgdev`, `pkgcheck`, `gh`, `git`, `go`, `rust-bin`, `jq`, `nodejs` and the Claude Code CLI
+**Contains:** Portage tree (the latest daily snapshot at build time, installed with `emerge-webrsync`), `pkgdev`, `pkgcheck`, `gh`, `git`, `go`, `rust-bin`, `jq` and the Claude Code CLI (`dev-util/claude-code`)
 
 Every build starts from stage3 rather than from the previously published image, so nothing accumulates between builds. Dependencies from `::gentoo` use stable keywords, and this overlay's packages `~amd64`, because the [official Gentoo binary package host](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart) is built from the stable tree. With `FEATURES="getbinpkg binpkg-request-signature"`, both the image build and verify's dependency installs use a binary package whenever one matches the requested version, USE flags and dependencies, and compile from source when none does. Every binary package needs a valid signature: one that fails the check fails the install instead of falling back to source. The build ends by removing package versions nothing depends on (`emerge --depclean`), downloaded source tarballs and binary packages, and the binary package keyring; `getuto` creates a new keyring in each job that installs binary packages.
 

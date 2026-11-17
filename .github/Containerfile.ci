@@ -13,11 +13,15 @@ FROM docker.io/gentoo/stage3:amd64-systemd
 # stage3 ships without the Gentoo tree. emerge-webrsync installs the latest
 # daily snapshot as a single download, verified against the Gentoo release
 # key, instead of rsyncing every file of the tree.
+#
+# dev-util/claude-code is the Claude Code CLI the workflows run. It installs
+# a prebuilt binary, which needs its license accepted and the AVX and AVX2
+# CPU flags.
 RUN echo 'FEATURES="-pid-sandbox -ipc-sandbox -network-sandbox getbinpkg binpkg-request-signature"' >> /etc/portage/make.conf && \
-    mkdir -p /etc/portage/package.accept_keywords && \
+    mkdir -p /etc/portage/package.accept_keywords /etc/portage/package.license /etc/portage/package.use && \
     echo '*/*::divoxx-overlay ~amd64' > /etc/portage/package.accept_keywords/divoxx-overlay && \
-    echo "net-libs/nodejs npm" >> /etc/portage/package.use/nodejs && \
-    echo "dev-cpp/simdutf atomic-base64" >> /etc/portage/package.use/nodejs && \
+    echo 'dev-util/claude-code all-rights-reserved' > /etc/portage/package.license/claude-code && \
+    echo 'dev-util/claude-code cpu_flags_x86_avx cpu_flags_x86_avx2' > /etc/portage/package.use/claude-code && \
     emerge-webrsync
 
 # sys-apps/portage is upgraded first and alone, only if an update is pending,
@@ -39,15 +43,17 @@ RUN if emerge --pretend --update sys-apps/portage | grep -q -E '^\[(ebuild|binar
 
 # Everything else, now guaranteed to run under a current portage. The last
 # commands remove what the image doesn't need at runtime: package versions
-# nothing depends on, downloaded source tarballs and binary packages, npm's
-# download cache, and the binary package keyring. getuto generated that
-# keyring's private key during this build, so it stays out of the published
-# image; each CI job that installs binary packages creates its own.
+# nothing depends on, downloaded source tarballs and binary packages, and the
+# binary package keyring. getuto generated that keyring's private key during
+# this build, so it stays out of the published image; each CI job that
+# installs binary packages creates its own.
 RUN emerge -u1vDN --quiet-build dev-lang/perl app-admin/perl-cleaner && \
     perl-cleaner --all -- --quiet-build && \
     emerge -uvDN --with-bdeps=y --backtrack=50 --quiet-build @world && \
-    emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin app-misc/jq net-libs/nodejs && \
-    npm install -g @anthropic-ai/claude-code && \
+    emerge --noreplace --quiet-build dev-vcs/git dev-util/pkgdev dev-util/pkgcheck dev-util/github-cli dev-lang/go dev-lang/rust-bin app-misc/jq dev-util/claude-code && \
     emerge --depclean && \
-    npm cache clean --force && \
     rm -rf /var/cache/distfiles/* /var/cache/binhost/* /etc/portage/gnupg
+
+# dev-util/claude-code installs claude to /opt/bin, which Gentoo's login PATH
+# includes (/etc/env.d/50baselayout) but the container's PATH doesn't.
+ENV PATH="${PATH}:/opt/bin"
