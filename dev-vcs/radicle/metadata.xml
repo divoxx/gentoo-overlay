@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<upstream>
+		<doc>https://radicle.dev/guides</doc>
+		<remote-id type="github">radicle-dev/heartwood</remote-id>
+	</upstream>
+	<use>
+		<flag name="man">Build and install man pages using <pkg>dev-ruby/asciidoctor</pkg></flag>
+	</use>
+</pkgmetadata>
