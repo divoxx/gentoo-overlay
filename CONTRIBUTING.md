@@ -243,7 +243,7 @@ Changes that need design, such as architectural or breaking changes, start as an
 
 ### `verify.yml` — Runs on pull requests and pushes to `main`
 
-Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), then runs `scripts/verify-ebuild.sh`, which runs `pkgcheck scan`, installs the build dependencies and builds through `install` into the staging directory. The `verify-result` job reports the outcome of the whole run, and the `main` ruleset requires it to pass, so a failure blocks merge. Promotes auto-update draft PRs to ready when all checks pass.
+Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), then runs `scripts/verify-ebuild.sh`, which runs `pkgcheck scan`, installs the build dependencies and builds through `install` into the staging directory. It runs in the CI image, where `::gentoo` dependencies resolve with stable keywords and install from Gentoo's binary package host when a matching binary exists; a dependency that needs `~amd64` is still accepted, and builds from source. Each verify job times out after 120 minutes. The `verify-result` job reports the outcome of the whole run, and the `main` ruleset requires it to pass, so a failure blocks merge. Promotes auto-update draft PRs to ready when all checks pass.
 
 ### `auto-update.yml` — Runs Sundays and Wednesdays at 06:20 UTC
 

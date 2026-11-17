@@ -93,6 +93,16 @@ The logs from `gh run view --log-failed` include pkgcheck output and build error
 - Replace the `EGO_SUM` array in the ebuild with the new entries.
 - This is a common, fixable cause of verify failures after version bumps.
 
+**Dependency install failure that isn't the ebuild's fault:**
+- Signals during step 4/5 (`emerge --onlydeps`): `Binary package is not usable`, `GnuPG verification failed`, `MissingSignature` or `InvalidSignature`, a getuto error, or a failed download of a binary package or of the binhost's `Packages` index from `distfiles.gentoo.org`.
+- These come from Gentoo's binary package host or the CI image, not from the ebuild. Do not edit the ebuild; treat the failure as transient and open an Issue (Step 4).
+- A signature failure usually means the binhost signs with a key that the CI image's `sec-keys/openpgp-keys-gentoo-release` doesn't have yet. The next CI image build picks up the new key.
+- Never work around it by turning off signature checks.
+
+**Job cancelled after 120 minutes:**
+- The verify job's `timeout-minutes` stopped it, usually while a dependency compiled from source. That happens when the binhost has no matching binary package, often for a `~amd64` version that autounmask accepted.
+- Treat it as transient and open an Issue that names the package that was building.
+
 ### Commit and push to the auto-update branch
 
 ```bash
@@ -128,9 +138,11 @@ Examine the failed job logs carefully. Classify the root cause:
 |---|---|
 | `dial tcp ... connection refused`, network timeout, TLS handshake error | Network transient |
 | `UNAUTHORIZED`, `403 Forbidden` from ghcr.io or any registry | Registry auth transient |
-| `rate limit exceeded` from GitHub API, npm, or Claude API | Rate limit transient |
+| `rate limit exceeded` from GitHub API or Claude API | Rate limit transient |
 | GitHub runner killed (OOM, timeout), context deadline exceeded | Infrastructure transient |
 | `emerge-webrsync` mirror failure without a package-level error | Portage mirror transient |
+| `Binary package is not usable`, `GnuPG verification failed`, `MissingSignature`/`InvalidSignature`, or a getuto error | Binhost signing transient (the binhost uses a key the image's keyring doesn't have yet) |
+| Failed download of a binary package or of the binhost `Packages` index from `distfiles.gentoo.org` | Binhost transient |
 | Claude API `529 Overloaded` or `500 Internal Server Error` | AI API transient |
 
 For transient failures: go to **Step 4 (Transient Path)**.
@@ -177,7 +189,12 @@ git checkout -b "$FIX_BRANCH"
 
 **Containerfile fixes (`.github/Containerfile.ci`):**
 - Read the file in full before editing.
-- The file uses a single `RUN` layer with one `emerge` call. Keep this structure.
+- The file has three `RUN` steps, in this order:
+  1. Portage configuration and the tree snapshot (`emerge-webrsync`).
+  2. A `sys-apps/portage` upgrade on its own.
+  3. Everything else, ending with `emerge --depclean` and the cache cleanup.
+- Keep that order: portage's upgrade stays in a step of its own, and the cleanup stays at the end of the last step.
+- Never turn off binary package signature checks. Don't add `binpkg-ignore-signature` to `FEATURES`, and don't set `verify-signature = false` in `binrepos.conf`.
 - If a package atom is wrong, check https://packages.gentoo.org/ to find the correct atom first.
 - Make only the minimal change needed.
 

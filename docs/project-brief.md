@@ -10,7 +10,7 @@ Packages not available in the official Gentoo tree or GURU overlay
 
 ## Goals
 
-Clean, CI-verified ebuilds that install correctly on ~amd64 systems
+Clean, CI-verified ebuilds that install correctly on amd64 systems that accept ~amd64 for this overlay; CI builds them against stable ::gentoo dependencies
 
 ## Non-Goals
 

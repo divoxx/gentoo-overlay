@@ -36,10 +36,10 @@ A personal Gentoo package overlay providing 7 packages across 4 categories. The 
 
 **Purpose:** Pre-synced Portage environment with all tools needed to verify and update ebuilds.
 **Location:** `.github/Containerfile.ci`
-**Built from:** `gentoo/stage3:amd64-systemd` (cold) or existing `gentoo-ci:latest` (incremental)
-**Contains:** Portage tree (synced at build time), `pkgdev`, `pkgcheck`, `gh`, `git`, `go`, `rust-bin`, `jq`
+**Built from:** `gentoo/stage3:amd64-systemd`, on every build
+**Contains:** Portage tree (the latest daily snapshot at build time, installed with `emerge-webrsync`), `pkgdev`, `pkgcheck`, `gh`, `git`, `go`, `rust-bin`, `jq` and the Claude Code CLI (`dev-util/claude-code`)
 
-The incremental build strategy (pulling the existing image and using it as the build base) means the Portage tree stays relatively fresh between weekly rebuilds and sync time in CI is minimal.
+Every build starts from stage3 rather than from the previously published image, so nothing accumulates between builds. Dependencies from `::gentoo` use stable keywords, and this overlay's packages `~amd64`, because the [official Gentoo binary package host](https://wiki.gentoo.org/wiki/Gentoo_Binary_Host_Quickstart) is built from the stable tree. With `FEATURES="getbinpkg binpkg-request-signature"`, both the image build and verify's dependency installs use a binary package whenever one matches the requested version, USE flags and dependencies, and compile from source when none does. Every binary package needs a valid signature: one that fails the check fails the install instead of falling back to source. The build ends by removing package versions nothing depends on (`emerge --depclean`), downloaded source tarballs and binary packages, and the binary package keyring; `getuto` creates a new keyring in each job that installs binary packages.
 
 ### Workflows
 
@@ -47,7 +47,7 @@ The incremental build strategy (pulling the existing image and using it as the b
 
 **Triggers:** Sunday 03:00 UTC (weekly) · push to `main` on `Containerfile.ci` changes · manual dispatch
 **Purpose:** Keeps the CI container image fresh with an updated Portage tree and tool versions.
-**Flow:** Pull existing image (for incremental build) → build via buildah → push `latest` + date-tagged image to `ghcr.io/divoxx/gentoo-ci`.
+**Flow:** Build from `gentoo/stage3:amd64-systemd` via buildah → push `latest` + date-tagged image to `ghcr.io/divoxx/gentoo-ci`.
 
 Runs before `auto-update.yml` (03:00 vs 06:20) so the update jobs always get a fresh Portage tree.
 
@@ -71,7 +71,7 @@ Runs before `auto-update.yml` (03:00 vs 06:20) so the update jobs always get a f
 **Flow:**
 1. Superseding run detection: skip if a newer run for the same branch is already queued/running (avoids redundant work on rapid pushes)
 2. Detect changed ebuilds by diffing against `origin/main` (PRs) or `$BEFORE` (main push)
-3. Matrix: one job per changed `category/package`, running in `gentoo-ci` container
+3. Matrix: one job per changed `category/package`, running in `gentoo-ci` container, with a 120-minute timeout
 4. Run `scripts/verify-ebuild.sh` for each package
 5. **Promote step** (auto-update branches only): if all verify jobs pass, promote the draft PR to "ready for review"
 6. **Result job** (`verify-result`, every run): fails unless detect-changes succeeded and every verify job passed or was skipped. It is the status check the `main` ruleset requires, since verify's own checks are named per package
@@ -148,10 +148,14 @@ The GitHub App token is generated fresh per workflow run via `tibdex/github-app-
 | Bot identity | GitHub App (`divoxx-bot`) | Scoped write permissions; fresh token per run; commits attributed to bot, not maintainer |
 | PR lifecycle | Draft on creation, promote on verify pass | Prevents auto-update PRs from landing without CI passing; merge is always a human action |
 | Version pruning | Keep 5 most recent ebuilds | Prevents unbounded accumulation; old ebuilds are rarely needed once superseded |
-| Portage sync in CI | Synced at image build time, re-synced at update time | Image build is weekly; update jobs re-sync to catch releases between image builds |
+| Portage sync in CI | Daily snapshot (`emerge-webrsync`) at image build time, re-synced at update time | A fresh stage3 has no tree, and one signed snapshot is a single download instead of an rsync of every file; update jobs re-sync to catch releases between image builds |
 | CI failure handling | Auto-debug via Claude Code agent | Reduces maintainer toil; most verify failures from version bumps have predictable fixes |
 | Idempotency guard | Last-commit-is-bot-fix check | Prevents infinite debug→fix→fail→debug loops on auto-update branches |
 | Superseding run detection | Skip if newer run queued for same branch | Avoids redundant verify runs on rapid pushes; saves CI minutes |
+| CI image base | Rebuilt from `gentoo/stage3` on every build | Nothing accumulates between builds (old package versions, caches, repeated config lines); binary packages keep a full build short |
+| Dependency keywords in CI | Stable for `::gentoo`, `~amd64` for this overlay's packages | Lets most dependencies install from the official binhost, which is built from the stable tree; with `~amd64` everywhere, testing versions such as a second LLVM toolchain always compiled from source |
+| Binary packages in CI | Official Gentoo binhost via `getbinpkg`, valid signatures required | Avoids multi-hour source builds (LLVM, nodejs, gcc) that pushed jobs into GitHub's 6-hour limit |
+| Verify job timeout | 120 minutes | A build that can't finish fails early instead of at GitHub's 6-hour limit |
 
 ## External Dependencies
 
@@ -160,5 +164,6 @@ The GitHub App token is generated fresh per workflow run via `tibdex/github-app-
 | `ghcr.io` (GitHub Container Registry) | Hosts the `gentoo-ci` CI container image |
 | `tibdex/github-app-token` GitHub Action | Generates short-lived GitHub App tokens per run |
 | Anthropic API (`ANTHROPIC_API_KEY`) | Powers the `ebuild-updater` and `ci-debugger` Claude Code agents |
-| `gentoo/stage3:amd64-systemd` | Base image for cold CI container builds |
+| `gentoo/stage3:amd64-systemd` | Base image for every CI container build |
+| Gentoo binary package host (configured by stage3's `binrepos.conf`) | Signed binary packages for the CI image build and verify's dependency installs |
 | Portage / Gentoo infrastructure | Package metadata, upstream sync via `emerge --sync` |

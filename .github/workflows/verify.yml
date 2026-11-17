@@ -84,6 +84,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.should_skip != 'true' && needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     container:
       image: ghcr.io/${{ github.repository_owner }}/gentoo-ci:latest
     strategy:

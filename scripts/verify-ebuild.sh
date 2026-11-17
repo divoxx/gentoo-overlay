@@ -134,7 +134,8 @@ if [[ ! -f "$OVERLAY_CONF" ]]; then
     echo "Registered overlay '$REPO_NAME' at $OVERLAY_ROOT"
 fi
 
-# First pass: write any required USE-flag changes to package.use (non-fatal).
+# First pass: write any USE-flag, keyword or license changes the dependencies
+# need (non-fatal).
 emerge --onlydeps --autounmask=y --autounmask-write \
     "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" 2>&1 || true
 
@@ -145,7 +146,7 @@ etc-update --automode -5 2>/dev/null || true
 # Second pass: install with the updated config in effect.
 emerge --onlydeps --quiet-build \
     "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
-    die "emerge --onlydeps failed — check DEPEND/BDEPEND declarations"
+    die "emerge --onlydeps failed — emerge's output above shows why"
 
 echo "deps: OK"
 
