@@ -146,7 +146,7 @@ etc-update --automode -5 2>/dev/null || true
 # Second pass: install with the updated config in effect.
 emerge --onlydeps --quiet-build \
     "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" || \
-    die "emerge --onlydeps failed — check DEPEND/BDEPEND declarations"
+    die "emerge --onlydeps failed — emerge's output above shows why"
 
 echo "deps: OK"
 
