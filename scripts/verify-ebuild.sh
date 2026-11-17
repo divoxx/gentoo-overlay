@@ -134,7 +134,8 @@ if [[ ! -f "$OVERLAY_CONF" ]]; then
     echo "Registered overlay '$REPO_NAME' at $OVERLAY_ROOT"
 fi
 
-# First pass: write any required USE-flag changes to package.use (non-fatal).
+# First pass: write any USE-flag, keyword or license changes the dependencies
+# need (non-fatal).
 emerge --onlydeps --autounmask=y --autounmask-write \
     "=${CATEGORY}/${NAME}-${PV}::${REPO_NAME}" 2>&1 || true
 
