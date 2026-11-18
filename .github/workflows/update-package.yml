@@ -1,0 +1,368 @@
+name: Update Package
+
+# Checks one package for an upstream release and, when there is one, opens a
+# draft PR that bumps it. auto-update.yml calls this once per package.
+#
+# The ebuild-updater agent runs Bash on content this repository doesn't
+# control, such as upstream release pages and package registries. A prompt
+# injection there could use any credential the agent's commands can reach,
+# and a job container has the host's Docker socket mounted, so that means
+# everything its runner holds. A runner holds only the secrets its own job
+# references, so the agent job gets ANTHROPIC_API_KEY as its only secret and a
+# read-only token that the checkout keeps out of .git/config.
+#
+# The publish job's runner holds the bot App's key from the start. What keeps
+# the key away from the agent is that this job runs no code from the agent
+# job: it treats the artifact as data, copies only the package directory and
+# README.md out of it, and uses the changelog only as PR text.
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: 'Package to update, as category/name'
+        required: true
+        type: string
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+      BOT_APP_ID:
+        required: true
+      BOT_APP_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/gentoo-ci:latest
+    # The agent's commands can reach this job's runtime token, which could
+    # otherwise save cache entries that later runs on main would restore.
+    cache-mode: none
+    outputs:
+      updated: ${{ steps.changes.outputs.updated }}
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Sync Portage tree
+        run: |
+          emerge --sync -q || { sleep 60 && emerge --sync -q; }
+          eselect news read all
+
+      - name: Configure git
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Run ebuild-updater
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          echo "Use the ebuild-updater agent to check for upstream updates and bump the ebuild for $PACKAGE if a newer version exists. Do not run pkgcheck or build verification — those are handled by a separate CI workflow." \
+            | timeout 3600 claude --print \
+                --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch"
+
+      - name: Check for changes
+        id: changes
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          # Untracked files count as changes: a bump adds a new ebuild, and a
+          # package without a committed Manifest gets a brand-new one. Only the
+          # paths the commit step stages are checked.
+          CHANGES=$(git status --porcelain --untracked-files=all -- "$PACKAGE" README.md)
+          if [ -n "$CHANGES" ]; then
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prune old versions (keep 5 most recent)
+        if: steps.changes.outputs.updated == 'true'
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          CATEGORY="${PACKAGE%%/*}"
+          NAME="${PACKAGE##*/}"
+          cd "$CATEGORY/$NAME"
+
+          EXCESS=$(ls *.ebuild | sort -V | head -n -5)
+          if [ -n "$EXCESS" ]; then
+            echo "$EXCESS" | xargs rm -f
+            pkgdev manifest
+          fi
+
+      # The publish job takes only these paths from the artifact.
+      - name: Stage the update
+        if: steps.changes.outputs.updated == 'true'
+        id: stage
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          CATEGORY="${PACKAGE%%/*}"
+          NAME="${PACKAGE##*/}"
+          STAGE="$RUNNER_TEMP/update"
+
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/files/$CATEGORY"
+          cp -R "$PACKAGE" "$STAGE/files/$PACKAGE"
+          cp README.md "$STAGE/files/README.md"
+          # The ebuild-updater writes the changelog only when the release
+          # notes have something worth listing in the PR.
+          if [ -f /tmp/pr-changelog.txt ]; then
+            cp /tmp/pr-changelog.txt "$STAGE/pr-changelog.txt"
+          fi
+
+          # An artifact drops hidden files and turns symlinks into copies,
+          # and the publish job refuses names outside A-Z a-z 0-9 . _ + @ -,
+          # so an update holding any of those fails here, where the cause is
+          # the agent's output, instead of changing or failing the commit.
+          unexpected() {
+            LC_ALL=C find "$STAGE" -mindepth 1 \
+              \( \( ! -type f ! -type d \) -o -name '.*' -o -name '*[!A-Za-z0-9._+@-]*' \) -print0
+          }
+          UNEXPECTED=$(unexpected | tr -cd '\0' | wc -c)
+          if [ "$UNEXPECTED" -ne 0 ]; then
+            echo "::error::The update may hold only regular files and directories with plain, unhidden names"
+            unexpected | xargs -0 printf '%q\n'
+            exit 1
+          fi
+
+          echo "path=$STAGE" >> "$GITHUB_OUTPUT"
+          echo "artifact=update-${CATEGORY}-${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the update
+        if: steps.changes.outputs.updated == 'true'
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.stage.outputs.artifact }}
+          path: ${{ steps.stage.outputs.path }}
+          if-no-files-found: error
+          # Long enough to re-run a failed publish job before the next
+          # scheduled run redoes the update.
+          retention-days: 7
+
+  publish:
+    needs: agent
+    if: needs.agent.outputs.updated == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Every leg's runtime token can replace any artifact in the run, and a
+      # replacement gets a new ID. Downloading the one ID this package's agent
+      # job reported fails if another leg swapped the artifact.
+      - name: Check the artifact ID
+        env:
+          ARTIFACT_ID: ${{ needs.agent.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$ARTIFACT_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::The agent job didn't report a single artifact ID"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the update
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.agent.outputs.artifact-id }}
+          path: ${{ runner.temp }}/update
+
+      # The agent job ran code this repository doesn't control, so nothing
+      # from it is trusted. Only this package's directory and README.md are
+      # taken from the artifact, and only as regular files and directories
+      # with plain names. The commit step uploads every changed file, so a
+      # symlink would make it upload a file from this runner instead, and a
+      # name that git quotes, or that a filesystem folds into .git, has no
+      # place in a package.
+      - name: Apply the update
+        env:
+          PACKAGE: ${{ inputs.package }}
+          UPDATE: ${{ runner.temp }}/update
+        run: |
+          set -euo pipefail
+          # PMS names: a category can't start with - . or +, and a package
+          # name has no dots, so neither part can be . or ..
+          if [[ ! "$PACKAGE" =~ ^[A-Za-z0-9_][A-Za-z0-9+_.-]*/[A-Za-z0-9_][A-Za-z0-9+_-]*$ ]]; then
+            echo "::error::Package must be category/name, got: $PACKAGE"
+            exit 1
+          fi
+
+          # Lists, NUL-separated, every entry that isn't a regular file or a
+          # directory, or whose name is hidden or uses a character outside
+          # A-Z a-z 0-9 . _ + @ -
+          unexpected() {
+            LC_ALL=C find "$UPDATE" -mindepth 1 \
+              \( \( ! -type f ! -type d \) -o -name '.*' -o -name '*[!A-Za-z0-9._+@-]*' \) -print0
+          }
+          UNEXPECTED=$(unexpected | tr -cd '\0' | wc -c)
+          if [ "$UNEXPECTED" -ne 0 ]; then
+            echo "::error::The update artifact may hold only regular files and directories with plain, unhidden names"
+            # %q escapes newlines, so a name can't start a line that the
+            # runner would read as a workflow command.
+            unexpected | xargs -0 printf '%q\n'
+            exit 1
+          fi
+          if [ ! -d "$UPDATE/files/$PACKAGE" ] || [ ! -f "$UPDATE/files/README.md" ]; then
+            echo "::error::The update artifact is missing $PACKAGE/ or README.md"
+            exit 1
+          fi
+
+          rm -rf "$PACKAGE"
+          cp -R "$UPDATE/files/$PACKAGE" "$PACKAGE"
+          cp "$UPDATE/files/README.md" README.md
+
+      - name: Generate bot token
+        id: bot-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.BOT_APP_ID }}
+          private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      - name: Commit and push update branch
+        id: push
+        env:
+          PACKAGE: ${{ inputs.package }}
+          REPO: ${{ github.repository }}
+          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          CATEGORY="${PACKAGE%%/*}"
+          NAME="${PACKAGE##*/}"
+          BRANCH="auto-update/${CATEGORY}-${NAME}"
+
+          # Stage the package directory, plus README.md in case the updater
+          # changed this package's row in the Packages table. Artifacts don't
+          # keep file modes, so a tracked file keeps the mode it already has.
+          git -c core.fileMode=false add "${CATEGORY}/${NAME}/" README.md
+
+          # Build GitHub API tree entries for each staged file.
+          # Commits created via the API are auto-signed by GitHub (shows as Verified).
+          ENTRIES='[]'
+          while IFS=$'\t' read -r status file new_file; do
+            if [[ "$status" == "D" ]]; then
+              # Deleted file: null sha removes it from the tree
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$file" \
+                '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
+            elif [[ "$status" == R* ]]; then
+              # Renamed file: remove old path, add new path
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$file" \
+                '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
+              MODE=$(git ls-files --stage "$new_file" | awk '{print $1}')
+              TMPJSON=$(mktemp)
+              base64 -w0 < "$new_file" | jq -Rs '{"encoding":"base64","content":.}' > "$TMPJSON"
+              BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
+                --method POST --input "$TMPJSON" --jq '.sha')
+              rm -f "$TMPJSON"
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$new_file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
+                '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
+            else
+              MODE=$(git ls-files --stage "$file" | awk '{print $1}')
+              # Use a temp file to avoid "Argument list too long" for large files
+              TMPJSON=$(mktemp)
+              base64 -w0 < "$file" | jq -Rs '{"encoding":"base64","content":.}' > "$TMPJSON"
+              BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
+                --method POST --input "$TMPJSON" --jq '.sha')
+              rm -f "$TMPJSON"
+              ENTRIES=$(echo "$ENTRIES" | jq \
+                --arg path "$file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
+                '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
+            fi
+          done < <(git diff --cached --name-status)
+
+          PARENT_SHA=$(git rev-parse HEAD)
+          BASE_TREE=$(git rev-parse "HEAD^{tree}")
+
+          NEW_TREE=$(jq -n \
+            --arg base_tree "$BASE_TREE" \
+            --argjson tree "$ENTRIES" \
+            '{"base_tree": $base_tree, "tree": $tree}' | \
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/trees" \
+              --method POST --input - --jq '.sha')
+
+          NEW_COMMIT=$(jq -n \
+            --arg message "auto-update: bump $PACKAGE" \
+            --arg tree "$NEW_TREE" \
+            --arg parent "$PARENT_SHA" \
+            '{"message": $message, "tree": $tree, "parents": [$parent]}' | \
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/commits" \
+              --method POST --input - --jq '.sha')
+
+          # Update existing branch ref or create it
+          if GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs/heads/$BRANCH" &>/dev/null; then
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs/heads/$BRANCH" \
+              --method PATCH -F force=true -f sha="$NEW_COMMIT"
+          else
+            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs" \
+              --method POST -f ref="refs/heads/$BRANCH" -f sha="$NEW_COMMIT"
+          fi
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Open draft PR (skip if one already exists)
+        env:
+          GITHUB_TOKEN: ${{ steps.bot-token.outputs.token }}
+          PACKAGE: ${{ inputs.package }}
+          BRANCH: ${{ steps.push.outputs.branch }}
+          REPO: ${{ github.repository }}
+          UPDATE: ${{ runner.temp }}/update
+        run: |
+          set -euo pipefail
+
+          EXISTING=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number \
+            --repo "$REPO" \
+            -q '.[0].number // empty')
+
+          if [ -n "${EXISTING:-}" ]; then
+            echo "PR #$EXISTING already open for $BRANCH — skipping"
+            exit 0
+          fi
+
+          CHANGELOG=""
+          if [ -f "$UPDATE/pr-changelog.txt" ]; then
+            CHANGELOG=$(cat "$UPDATE/pr-changelog.txt")
+          fi
+
+          if [ -n "$CHANGELOG" ]; then
+            BODY=$(printf '%s\n\n## What changed\n\n%s\n\n%s\n\n%s' \
+              "Automated upstream version bump for \`$PACKAGE\`." \
+              "$CHANGELOG" \
+              "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
+              "Generated with [Claude Code](https://claude.com/claude-code)")
+          else
+            BODY=$(printf '%s\n\n%s\n\n%s' \
+              "Automated upstream version bump for \`$PACKAGE\`." \
+              "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
+              "Generated with [Claude Code](https://claude.com/claude-code)")
+          fi
+
+          gh pr create \
+            --draft \
+            --title "auto-update: $PACKAGE" \
+            --body "$BODY" \
+            --base main \
+            --head "$BRANCH" \
+            --repo "$REPO"

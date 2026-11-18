@@ -207,6 +207,7 @@ Types: `feat` adds a capability or package version, `fix` corrects wrong behavio
 1. Create a branch: `feat/<category>-<name>` or `fix/<description>`.
 2. Push and open a PR against `main`. The verify workflow runs automatically.
 3. CI must pass before merging: the `main` ruleset requires the `verify-result` check. Fix any CI failures before requesting review.
+4. The repository admin merges the PR. A second ruleset restricts updates to `main` to that role, so bot and workflow tokens can't change `main`.
 
 Auto-update PRs (opened by the auto-update workflow) are promoted from draft to ready automatically when all checks pass.
 
@@ -247,4 +248,4 @@ Detects changed ebuilds, then for each: fails if the committed Manifest is missi
 
 ### `auto-update.yml` — Runs Sundays and Wednesdays at 06:20 UTC
 
-Checks all packages for upstream updates. Creates version-bump ebuilds, pushes `auto-update/<category>-<name>` branches, opens draft PRs, and prunes packages to at most 5 versions.
+Checks all packages for upstream updates. Creates version-bump ebuilds, pushes `auto-update/<category>-<name>` branches, opens draft PRs, and prunes packages to at most 5 versions. Each package goes through `update-package.yml`: the `ebuild-updater` agent runs in a job without write access to the repository, and a second job, which runs nothing from the first, commits the result and opens the PR.
