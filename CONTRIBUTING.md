@@ -207,6 +207,7 @@ Types: `feat` adds a capability or package version, `fix` corrects wrong behavio
 1. Create a branch: `feat/<category>-<name>` or `fix/<description>`.
 2. Push and open a PR against `main`. The verify workflow runs automatically.
 3. CI must pass before merging: the `main` ruleset requires the `verify-result` check. Fix any CI failures before requesting review.
+4. The repository admin merges the PR. The `main` ruleset restricts updates to that role, so bot and workflow tokens can't change `main`. The merge box blocks every PR until the admin ticks "Merge without waiting for requirements to be met (bypass rules)", and that bypass skips the `verify-result` requirement too, so confirm it passed first.
 
 Auto-update PRs (opened by the auto-update workflow) are promoted from draft to ready automatically when all checks pass.
 
@@ -243,8 +244,8 @@ Changes that need design, such as architectural or breaking changes, start as an
 
 ### `verify.yml` — Runs on pull requests and pushes to `main`
 
-Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), then runs `scripts/verify-ebuild.sh`, which runs `pkgcheck scan`, installs the build dependencies and builds through `install` into the staging directory. It runs in the CI image, where `::gentoo` dependencies resolve with stable keywords and install from Gentoo's binary package host when a matching binary exists; a dependency that needs `~amd64` is still accepted, and builds from source. Each verify job times out after 120 minutes. The `verify-result` job reports the outcome of the whole run, and the `main` ruleset requires it to pass, so a failure blocks merge. Promotes auto-update draft PRs to ready when all checks pass.
+Detects changed ebuilds, then for each: fails if the committed Manifest is missing or out of date (regenerating it with `pkgdev manifest` must not change it), then runs `scripts/verify-ebuild.sh`, which runs `pkgcheck scan`, installs the build dependencies and builds through `install` into the staging directory. It runs in the CI image, where `::gentoo` dependencies resolve with stable keywords and install from Gentoo's binary package host when a matching binary exists; a dependency that needs `~amd64` is still accepted, and builds from source. Each verify job times out after 120 minutes. The `verify-result` job reports the outcome of the whole run, and the `main` ruleset requires it to pass. Every merge bypasses that ruleset, though, so the admin checks it before merging. Promotes auto-update draft PRs to ready when all checks pass.
 
 ### `auto-update.yml` — Runs Sundays and Wednesdays at 06:20 UTC
 
-Checks all packages for upstream updates. Creates version-bump ebuilds, pushes `auto-update/<category>-<name>` branches, opens draft PRs, and prunes packages to at most 5 versions.
+Checks all packages for upstream updates. Creates version-bump ebuilds, pushes `auto-update/<category>-<name>` branches, opens draft PRs, and prunes packages to at most 5 versions. Each package goes through `update-package.yml`: the `ebuild-updater` agent runs in a job without write access to the repository, and a second job, which runs nothing from the first, commits the result and opens the PR.

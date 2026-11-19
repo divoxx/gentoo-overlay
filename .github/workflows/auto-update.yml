@@ -6,9 +6,10 @@ on:
     - cron: '20 6 * * 3'  # Wednesday 06:20 UTC
   workflow_dispatch:        # allow manual trigger for testing
 
+# Writes to GitHub use the bot token that update-package.yml's publish job
+# mints, so the workflow's own token only reads.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   list-packages:
@@ -30,213 +31,14 @@ jobs:
 
   update:
     needs: list-packages
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/${{ github.repository_owner }}/gentoo-ci:latest
     strategy:
       matrix:
         package: ${{ fromJson(needs.list-packages.outputs.packages) }}
       fail-fast: false
-
-    steps:
-      - name: Generate bot token
-        id: bot-token
-        uses: tibdex/github-app-token@v2
-        with:
-          app_id: ${{ secrets.BOT_APP_ID }}
-          private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
-
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ steps.bot-token.outputs.token }}
-
-      - name: Sync Portage tree
-        run: |
-          emerge --sync -q || { sleep 60 && emerge --sync -q; }
-          eselect news read all
-
-      - name: Configure git
-        env:
-          REPO: ${{ github.repository }}
-          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
-          BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
-        run: |
-          set -euo pipefail
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config --global user.name "divoxx-bot[bot]"
-          git config --global user.email "${BOT_APP_ID}+divoxx-bot[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:$BOT_TOKEN@github.com/$REPO.git"
-
-      - name: Run ebuild-updater
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          PACKAGE: ${{ matrix.package }}
-        run: |
-          set -euo pipefail
-          echo "Use the ebuild-updater agent to check for upstream updates and bump the ebuild for $PACKAGE if a newer version exists. Do not run pkgcheck or build verification — those are handled by a separate CI workflow." \
-            | timeout 3600 claude --print \
-                --allowedTools "Task,Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch"
-
-      - name: Check for changes
-        id: changes
-        env:
-          PACKAGE: ${{ matrix.package }}
-        run: |
-          set -euo pipefail
-          # Untracked files count as changes: a bump adds a new ebuild, and a
-          # package without a committed Manifest gets a brand-new one. Only the
-          # paths the commit step stages are checked.
-          CHANGES=$(git status --porcelain --untracked-files=all -- "$PACKAGE" README.md)
-          if [ -n "$CHANGES" ]; then
-            echo "updated=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "updated=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Prune old versions (keep 5 most recent)
-        if: steps.changes.outputs.updated == 'true'
-        env:
-          PACKAGE: ${{ matrix.package }}
-        run: |
-          set -euo pipefail
-          CATEGORY="${PACKAGE%%/*}"
-          NAME="${PACKAGE##*/}"
-          cd "$CATEGORY/$NAME"
-
-          EXCESS=$(ls *.ebuild | sort -V | head -n -5)
-          if [ -n "$EXCESS" ]; then
-            echo "$EXCESS" | xargs rm -f
-            pkgdev manifest
-          fi
-
-      - name: Commit and push update branch
-        if: steps.changes.outputs.updated == 'true'
-        id: push
-        env:
-          PACKAGE: ${{ matrix.package }}
-          REPO: ${{ github.repository }}
-          BOT_TOKEN: ${{ steps.bot-token.outputs.token }}
-        run: |
-          set -euo pipefail
-          CATEGORY="${PACKAGE%%/*}"
-          NAME="${PACKAGE##*/}"
-          BRANCH="auto-update/${CATEGORY}-${NAME}"
-
-          # Stage the package directory, plus README.md in case the updater
-          # changed this package's row in the Packages table
-          git add "${CATEGORY}/${NAME}/" README.md
-
-          # Build GitHub API tree entries for each staged file.
-          # Commits created via the API are auto-signed by GitHub (shows as Verified).
-          ENTRIES='[]'
-          while IFS=$'\t' read -r status file new_file; do
-            if [[ "$status" == "D" ]]; then
-              # Deleted file: null sha removes it from the tree
-              ENTRIES=$(echo "$ENTRIES" | jq \
-                --arg path "$file" \
-                '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
-            elif [[ "$status" == R* ]]; then
-              # Renamed file: remove old path, add new path
-              ENTRIES=$(echo "$ENTRIES" | jq \
-                --arg path "$file" \
-                '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": null}]')
-              MODE=$(git ls-files --stage "$new_file" | awk '{print $1}')
-              TMPJSON=$(mktemp)
-              base64 -w0 < "$new_file" | jq -Rs '{"encoding":"base64","content":.}' > "$TMPJSON"
-              BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
-                --method POST --input "$TMPJSON" --jq '.sha')
-              rm -f "$TMPJSON"
-              ENTRIES=$(echo "$ENTRIES" | jq \
-                --arg path "$new_file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
-                '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
-            else
-              MODE=$(git ls-files --stage "$file" | awk '{print $1}')
-              # Use a temp file to avoid "Argument list too long" for large files
-              TMPJSON=$(mktemp)
-              base64 -w0 < "$file" | jq -Rs '{"encoding":"base64","content":.}' > "$TMPJSON"
-              BLOB_SHA=$(GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/blobs" \
-                --method POST --input "$TMPJSON" --jq '.sha')
-              rm -f "$TMPJSON"
-              ENTRIES=$(echo "$ENTRIES" | jq \
-                --arg path "$file" --arg mode "$MODE" --arg sha "$BLOB_SHA" \
-                '. + [{"path": $path, "mode": $mode, "type": "blob", "sha": $sha}]')
-            fi
-          done < <(git diff --cached --name-status)
-
-          PARENT_SHA=$(git rev-parse HEAD)
-          BASE_TREE=$(git rev-parse "HEAD^{tree}")
-
-          NEW_TREE=$(jq -n \
-            --arg base_tree "$BASE_TREE" \
-            --argjson tree "$ENTRIES" \
-            '{"base_tree": $base_tree, "tree": $tree}' | \
-            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/trees" \
-              --method POST --input - --jq '.sha')
-
-          NEW_COMMIT=$(jq -n \
-            --arg message "auto-update: bump $PACKAGE" \
-            --arg tree "$NEW_TREE" \
-            --arg parent "$PARENT_SHA" \
-            '{"message": $message, "tree": $tree, "parents": [$parent]}' | \
-            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/commits" \
-              --method POST --input - --jq '.sha')
-
-          # Update existing branch ref or create it
-          if GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs/heads/$BRANCH" &>/dev/null; then
-            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs/heads/$BRANCH" \
-              --method PATCH -F force=true -f sha="$NEW_COMMIT"
-          else
-            GH_TOKEN="$BOT_TOKEN" gh api "repos/$REPO/git/refs" \
-              --method POST -f ref="refs/heads/$BRANCH" -f sha="$NEW_COMMIT"
-          fi
-
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-
-      - name: Open draft PR (skip if one already exists)
-        if: steps.changes.outputs.updated == 'true'
-        env:
-          GITHUB_TOKEN: ${{ steps.bot-token.outputs.token }}
-          PACKAGE: ${{ matrix.package }}
-          BRANCH: ${{ steps.push.outputs.branch }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          EXISTING=$(gh pr list \
-            --head "$BRANCH" \
-            --state open \
-            --json number \
-            --repo "$REPO" \
-            -q '.[0].number // empty')
-
-          if [ -n "${EXISTING:-}" ]; then
-            echo "PR #$EXISTING already open for $BRANCH — skipping"
-            exit 0
-          fi
-
-          CHANGELOG=""
-          if [ -f /tmp/pr-changelog.txt ]; then
-            CHANGELOG=$(cat /tmp/pr-changelog.txt)
-          fi
-
-          if [ -n "$CHANGELOG" ]; then
-            BODY=$(printf '%s\n\n## What changed\n\n%s\n\n%s\n\n%s' \
-              "Automated upstream version bump for \`$PACKAGE\`." \
-              "$CHANGELOG" \
-              "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
-              "Generated with [Claude Code](https://claude.com/claude-code)")
-          else
-            BODY=$(printf '%s\n\n%s\n\n%s' \
-              "Automated upstream version bump for \`$PACKAGE\`." \
-              "Verification will run automatically via the verify workflow. The PR will be promoted from draft to ready when all checks pass." \
-              "Generated with [Claude Code](https://claude.com/claude-code)")
-          fi
-
-          gh pr create \
-            --draft \
-            --title "auto-update: $PACKAGE" \
-            --body "$BODY" \
-            --base main \
-            --head "$BRANCH" \
-            --repo "$REPO"
+    uses: ./.github/workflows/update-package.yml
+    with:
+      package: ${{ matrix.package }}
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
+      BOT_APP_PRIVATE_KEY: ${{ secrets.BOT_APP_PRIVATE_KEY }}

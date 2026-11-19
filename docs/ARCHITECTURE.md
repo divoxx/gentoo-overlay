@@ -57,12 +57,18 @@ Runs before `auto-update.yml` (03:00 vs 06:20) so the update jobs always get a f
 **Purpose:** Checks every package for upstream releases and opens draft PRs for any that have new versions.
 **Flow:**
 1. List all packages in the overlay
-2. Matrix: one job per package, running in `gentoo-ci` container
-3. Sync Portage tree
-4. Run `ebuild-updater` Claude Code agent to check upstream and bump if needed
-5. Prune oldest ebuilds beyond the 5 most recent (to prevent unbounded accumulation)
-6. Commit via GitHub API (tree + commit objects) using the `divoxx-bot` GitHub App — produces GitHub-signed "Verified" commits without GPG keys in CI
-7. Open a draft PR targeting `main`
+2. Matrix: one run of the reusable `update-package.yml` per package, made of two jobs
+3. **`agent` job**, in the `gentoo-ci` container:
+   1. Sync Portage tree
+   2. Run `ebuild-updater` Claude Code agent to check upstream and bump if needed
+   3. Prune oldest ebuilds beyond the 5 most recent (to prevent unbounded accumulation)
+   4. Upload the package directory, `README.md` and the PR changelog as an artifact, after checking that they hold only regular files and directories with plain, unhidden names, which is all an artifact carries unchanged and all the `publish` job accepts
+4. **`publish` job**, only when the package changed:
+   1. Download the artifact by the ID the `agent` job reported, check that it holds only regular files and directories with plain, unhidden names, and copy in the package directory and `README.md`
+   2. Commit via GitHub API (tree + commit objects) using the `divoxx-bot` GitHub App — produces GitHub-signed "Verified" commits without GPG keys in CI
+   3. Open a draft PR targeting `main`
+
+The agent runs Bash on content this repository doesn't control, such as upstream release pages and package registries, so the job it runs in has no write access to the repository. Its token can only read, the checkout keeps that token out of `.git/config`, and `ANTHROPIC_API_KEY` is its only secret. The boundary is the job: each job runs on its own runner, which holds only the secrets that job references. Within a job, the agent's commands can reach everything the runner holds, because a job container has the host's Docker socket mounted. That includes the job's runtime token, which can upload and replace artifacts in the run, so the `publish` job downloads by artifact ID, and which would also save cache entries if the job's `cache-mode` weren't `none`. The `publish` job's runner holds the bot App's key from the start; what keeps it from the agent is that the job runs no code from the `agent` job and treats the artifact as data. The split doesn't cover text the `agent` job writes to its log: when a run fails, `debug-ci-failure.yml` passes the failed jobs' logs to the `ci-debugger` agent, which holds the bot token.
 
 #### `verify.yml` — QA + Build Verification
 
@@ -93,7 +99,7 @@ Runs before `auto-update.yml` (03:00 vs 06:20) so the update jobs always get a f
 
 | Agent | Invoked by | Responsibility |
 |-------|-----------|----------------|
-| `ebuild-updater` | `auto-update.yml` | Check upstream releases; bump ebuild version if needed; update Manifest |
+| `ebuild-updater` | `update-package.yml`, called by `auto-update.yml` | Check upstream releases; bump ebuild version if needed; update Manifest |
 | `ebuild-writer` | Developer manually | Create a new ebuild from scratch for a given upstream URL |
 | `ebuild-verifier` | Developer manually | Run pkgcheck QA + build test; report results |
 | `ci-debugger` | `debug-ci-failure.yml` | Classify CI failure; fix, PR, or open issue accordingly |
@@ -112,7 +118,7 @@ Thin shell wrappers around `gh` CLI calls, used by the `ci-debugger` agent to ke
 
 The bot GitHub App is used wherever a token with write access is needed:
 
-- **Auto-update:** create branches and commits via GitHub API; open draft PRs
+- **Auto-update:** create branches and commits via GitHub API; open draft PRs. Only `update-package.yml`'s `publish` job mints the token; the `agent` job never has it
 - **Verify promote:** promote draft PRs to ready
 - **Debug fix:** push fix commits; open fix PRs
 
@@ -127,9 +133,9 @@ The GitHub App token is generated fresh per workflow run via `tibdex/github-app-
   build-image.yml ──► ghcr.io/divoxx/gentoo-ci:latest
         │
         ▼
-  auto-update.yml
-    ├─ ebuild-updater agent (Claude Code)
-    ├─ GitHub API commit (Verified signature)
+  auto-update.yml ──► update-package.yml, per package
+    ├─ agent job: ebuild-updater agent (Claude Code), read-only token
+    ├─ publish job: GitHub API commit (Verified signature)
     └─ Draft PR ──► verify.yml
                       ├─ verify-ebuild.sh (in gentoo-ci container)
                       └─ [pass] promote PR to ready
@@ -156,6 +162,9 @@ The GitHub App token is generated fresh per workflow run via `tibdex/github-app-
 | Dependency keywords in CI | Stable for `::gentoo`, `~amd64` for this overlay's packages | Lets most dependencies install from the official binhost, which is built from the stable tree; with `~amd64` everywhere, testing versions such as a second LLVM toolchain always compiled from source |
 | Binary packages in CI | Official Gentoo binhost via `getbinpkg`, valid signatures required | Avoids multi-hour source builds (LLVM, nodejs, gcc) that pushed jobs into GitHub's 6-hour limit |
 | Verify job timeout | 120 minutes | A build that can't finish fails early instead of at GitHub's 6-hour limit |
+| Auto-update agent isolation | The agent runs in its own job, with a read-only token and `ANTHROPIC_API_KEY` as its only secret; a separate `publish` job mints the bot token | A prompt injection in upstream content can use whatever the agent's commands reach, and through the job container's Docker socket that is everything the runner holds, so only a separate job keeps the bot App's key away from the agent |
+| Updates to `main` | The `main` ruleset restricts updates, with the Repository admin role as its only bypass actor | A leaked token with write access can't change `main`. Every merge bypasses the ruleset, and a bypass skips all of its rules, so `verify-result` and signatures don't block the admin's merges |
+| Subprocess env scrub for the agent | Not used | On Linux, `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` runs every Bash command in Claude Code's sandbox, which needs bubblewrap and socat and doesn't start in the job container, so the agent's commands would be refused. `ANTHROPIC_API_KEY` stays readable by those commands |
 
 ## External Dependencies
 
