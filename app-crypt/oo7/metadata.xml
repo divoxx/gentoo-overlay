@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rk@divoxx.me</email>
+		<name>Rodrigo Kochenburger</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">linux-credentials/oo7</remote-id>
+		<bugs-to>https://github.com/linux-credentials/oo7/issues</bugs-to>
+	</upstream>
+	<use>
+		<flag name="daemon">Build and install oo7-daemon, the org.freedesktop.secrets server that replaces <pkg>gnome-base/gnome-keyring</pkg></flag>
+		<flag name="openssl">Use <pkg>dev-libs/openssl</pkg> for cryptography instead of the pure-Rust implementation</flag>
+		<flag name="pam">Build and install pam_oo7.so, which unlocks the oo7-daemon login keyring at login</flag>
+		<flag name="portal">Build and install oo7-portal, the org.freedesktop.impl.portal.Secret backend for <pkg>sys-apps/xdg-desktop-portal</pkg></flag>
+	</use>
+</pkgmetadata>
